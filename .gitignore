@@ -1,0 +1,11 @@
+# Eclipse files
+/.cproject
+/.project
+/.settings/
+
+# Eclipse builds
+/Debug/
+/Release/
+
+# Swap files
+*.swp

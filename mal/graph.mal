@@ -1,0 +1,35 @@
+# Exporting the graph functions into monetdb
+# ln -s graph.mal <monetdb>/lib/monetdb5
+module graph;
+
+command load(:str) (:bat[:oid],:bat[:oid],:bat[:lng])
+address GRAPHload
+comment "Import a graph produced by the utility randomgen into three bats <from, to, weight>"; 
+
+command prefixsum(:bat[:oid]) :bat[:oid]
+address GRAPHprefixsum
+comment "Perform the prefix sum of the value in the BAT";
+
+function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat[:oid], :bat[:lng]);
+  # check inputs have the same input size
+  from_sz := bat.getCount(from);
+  to_sz := bat.getCount(to);
+  weights_sz := bat.getCount(weights);
+  barrier chk1 := from_sz != to_sz;
+    raise IllegalArgument := "Invalid input size";
+  exit chk1;
+  barrier chk2 := from_sz != weights_sz;
+    raise IllegalArgument := "Invalid input size";
+  exit chk2;
+  # it should check also whether it contains nil values ... 
+  
+  (fs, perm) := algebra.subsort(from, false, false);
+  ft := algebra.projection(perm, to);
+  fw := algebra.projection(perm, weights);
+  
+  # perform the prefix sum
+  io.print(fs);
+  fs_ps := graph.prefixsum(fs);
+  
+  return (fs_ps, ft, fw);
+end make;

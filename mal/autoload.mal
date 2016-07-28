@@ -1,0 +1,4 @@
+# This is the script to load the graph module into MonetDB
+# ln -s autoload.mal <monetdb>/lib/monetdb5/autoload/50_graph.mal
+
+include graph;

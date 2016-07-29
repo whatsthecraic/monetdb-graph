@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "algorithms.hpp"
 #include "graph.hpp"
 #include "radixheap.hpp"
 
@@ -20,63 +21,6 @@ using std::size_t; // omnipresent
 
 /******************************************************************************
  *                                                                            *
- *   Dijkstra SSSD                                                            *
- *                                                                            *
- ******************************************************************************/
-template<typename vertex_t>
-struct Paths{
-	std::vector<vertex_t> revpath;
-	std::vector<std::size_t> revlen;
-};
-
-template<typename Queue, typename V, typename W>
-static void dijkstra_sssd(graph::Graph<V, W>& G, V src, V dst, W& dist, Paths<V>& paths){
-	Queue Q;
-	const W inf = std::numeric_limits<W>::max();
-
-	// Distance vector
-	W D[G.size()];
-	for(std::size_t i = 0; i < G.size(); i++){ D[i] = inf; }
-	D[src] = 0;
-
-	// Parents
-	V P[G.size()];
-	P[src] = src;
-
-	while(!Q.empty()){
-		auto root = Q.pop();
-
-		if(root.d > D[root.v]) continue; // we already considered this node, ignore
-		if(root.v == dst) break; // found
-
-		// relax the edges
-		for(const auto& e : G[root.v]){
-			W td = D[root.v] + e.w;
-			if(td < D[e.v]){
-				D[e.v] = td;
-				P[e.v] = root.v;
-				Q.push(e.v, td);
-			}
-		}
-	}
-
-	// report the output path
-	if(D[dst] < inf){
-		size_t len = 0;
-		for(V parent = P[dst]; parent != src; parent = P[dst]){
-			paths.revpath.push_back(parent);
-			len++;
-		}
-		paths.revlen.push_back(len);
-	} else {
-		paths.revlen.push_back(0);
-	}
-
-	dist = D[dst]; // output weight
-}
-
-/******************************************************************************
- *                                                                            *
  *   C++ operator                                                             *
  *                                                                            *
  ******************************************************************************/
@@ -90,17 +34,16 @@ struct Input {
 };
 
 template<typename vertex_t, typename weight_t>
-static void spfw(Input<vertex_t, weight_t>& query, Input<vertex_t, weight_t>& graph, Paths<vertex_t>& paths){
+static void spfw(Input<vertex_t, weight_t>& query, Input<vertex_t, weight_t>& graph, monetdb::Path<vertex_t>& paths){
 	// Graph
-	graph::Graph<vertex_t, weight_t> G(graph.size, graph.src, graph.dst, graph.weights);
+	monetdb::Graph<vertex_t, weight_t> G(graph.size, graph.src, graph.dst, graph.weights);
 
 	// Queue
-	using Queue = graph::RadixHeap<vertex_t, weight_t>;
+	using Queue = monetdb::RadixHeap<vertex_t, weight_t>;
 
 	// Perform Dijkstra for each query
-	for(std::size_t i = 0; i < query.size; i++){
-		dijkstra_sssd<Queue>(G, query.src[i], query.dst[i], query.weights[i], paths);
-	}
+	monetdb::SequentialDijkstra<Queue, vertex_t, weight_t> algorithm(G);
+	algorithm.msmd(query.src, query.dst, query.weights, query.size, paths);
 }
 
 
@@ -131,27 +74,31 @@ static void trampoline(BAT* q_from, BAT* q_to, BAT* q_weights,
 	};
 
 	// prepare the paths
-	Paths<vertex_t> paths;
+	monetdb::Path<vertex_t> paths;
 
 	// jump to the C++ operator
 	spfw(query, graph, paths);
 
 	// almost done, we need to fill the shortest paths
 	size_t revlen_sz = paths.revlen.size();
+	size_t revpath_sz = paths.revpath.size();
 	assert(revlen_sz == query.size);
-	if ( BATextend(r_oid_paths, revlen_sz) != GDK_SUCCEED ){ throw std::bad_alloc(); }
-	if ( BATextend(r_paths, revlen_sz) != GDK_SUCCEED ){ throw std::bad_alloc(); }
+	if ( BATextend(r_oid_paths, revpath_sz) != GDK_SUCCEED ){ throw std::bad_alloc(); }
+	if ( BATextend(r_paths, revpath_sz) != GDK_SUCCEED ){ throw std::bad_alloc(); }
 	oid* pos_oid = reinterpret_cast<oid*>(r_oid_paths->theap.base);
 	vertex_t* pos_val = reinterpret_cast<vertex_t*>(r_paths->theap.base);
+	vertex_t* revpath = paths.revpath.data();
 	for(size_t i = 0; i < revlen_sz; i++){
 		size_t pathlen_sz = paths.revlen[i];
 		for(size_t j = 0; j < pathlen_sz; j++, pos_oid++, pos_val++){
 			*pos_oid = i;
-			*pos_val = paths.revpath[pathlen_sz -1 -j]; // revert the path
+			*pos_val = revpath[pathlen_sz -1 -j]; // revert the path
 		}
+		revpath += pathlen_sz;
 	}
-	BATsetcount(r_oid_paths, revlen_sz);
-	BATsetcount(r_paths, revlen_sz);
+	BATsetcount(r_oid_paths, revpath_sz);
+	BATsetcount(r_paths, revpath_sz);
+	BATsetcount(q_weights, revlen_sz);
 }
 
 /******************************************************************************
@@ -159,6 +106,8 @@ static void trampoline(BAT* q_from, BAT* q_to, BAT* q_weights,
  *   MonetDB interface                                                        *
  *                                                                            *
  ******************************************************************************/
+extern "C" {
+
 #define CHECK( EXPR, ERROR ) if ( !(EXPR) ) \
 	{ rc = createException(MAL, function_name /*__FUNCTION__?*/, ERROR); goto error; }
 
@@ -166,30 +115,30 @@ static void trampoline(BAT* q_from, BAT* q_to, BAT* q_weights,
 #define BATfree( b ) if(b) { BBPunfix(b->batCacheid); }
 
 mal_export str
-GRAPHspfw(bat* id_out_query_from, bat* id_out_query_to, bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_query_path,
-		bat* id_in_query_from, bat* id_in_query_to, bat* id_in_vertices, bat* id_in_edges, bat* id_in_weights) noexcept {
+GRAPHspfw(bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_query_path,
+		bat* id_in_vertices, bat* id_in_edges, bat* id_in_weights, bat* id_in_query_from, bat* id_in_query_to) noexcept {
 	str rc = MAL_SUCCEED;
 	const char* function_name = "graph.spfw";
-	BAT* in_query_from = nullptr;
-	BAT* in_query_to = nullptr;
 	BAT* in_vertices = nullptr;
 	BAT* in_edges = nullptr;
 	BAT* in_weights = nullptr;
+	BAT* in_query_from = nullptr;
+	BAT* in_query_to = nullptr;
 	BAT* out_query_weights = nullptr;
 	BAT* out_query_oid_path = nullptr;
 	BAT* out_query_path = nullptr;
 
 	// retrieve the input bats
-	in_query_from = BATdescriptor(*id_in_query_from);
-	CHECK(in_query_from != nullptr, RUNTIME_OBJECT_MISSING);
-	in_query_to = BATdescriptor(*id_in_query_to);
-	CHECK(in_query_to != nullptr, RUNTIME_OBJECT_MISSING);
 	in_vertices = BATdescriptor(*id_in_vertices);
 	CHECK(in_vertices != nullptr, RUNTIME_OBJECT_MISSING);
 	in_edges = BATdescriptor(*id_in_edges);
 	CHECK(in_edges != nullptr, RUNTIME_OBJECT_MISSING);
 	in_weights = BATdescriptor(*id_in_weights);
 	CHECK(in_weights != nullptr, RUNTIME_OBJECT_MISSING);
+	in_query_from = BATdescriptor(*id_in_query_from);
+	CHECK(in_query_from != nullptr, RUNTIME_OBJECT_MISSING);
+	in_query_to = BATdescriptor(*id_in_query_to);
+	CHECK(in_query_to != nullptr, RUNTIME_OBJECT_MISSING);
 
 	// validate input bats properties
 	CHECK(BATttype(in_query_from) == TYPE_oid, ILLEGAL_ARGUMENT);
@@ -200,9 +149,9 @@ GRAPHspfw(bat* id_out_query_from, bat* id_out_query_to, bat* id_out_query_weight
 	// allocate the output vectors
 	out_query_weights = COLnew(in_query_from->hseqbase, in_weights->ttype, BATcount(in_query_from), TRANSIENT);
 	CHECK(out_query_weights != nullptr, MAL_MALLOC_FAIL);
-	out_query_oid_path = COLnew(0 /* TO BE CHECKED */, TYPE_oid, 0, TRANSIENT);
+	out_query_oid_path = COLnew(in_query_from->hseqbase, TYPE_oid, 0, TRANSIENT);
 	CHECK(out_query_oid_path != nullptr, MAL_MALLOC_FAIL);
-	out_query_path = COLnew(0 /* TO BE CHECKED */, in_query_from->batCacheid, 0, TRANSIENT);
+	out_query_path = COLnew(in_query_from->hseqbase, TYPE_oid, 0, TRANSIENT);
 	CHECK(out_query_path != nullptr, MAL_MALLOC_FAIL);
 
 	try {
@@ -220,13 +169,11 @@ GRAPHspfw(bat* id_out_query_from, bat* id_out_query_to, bat* id_out_query_weight
 	}
 
 
-	BBPkeepref(*id_in_query_from);
+	BBPkeepref(*id_in_query_from); // TODO to be checked
 	BBPkeepref(*id_in_query_to);
 	BBPkeepref(out_query_weights->batCacheid);
 	BBPkeepref(out_query_path->batCacheid);
 	BBPkeepref(out_query_oid_path->batCacheid);
-	*id_out_query_from = *id_in_query_from;
-	*id_out_query_to = *id_in_query_to;
 	*id_out_query_weight = out_query_weights->batCacheid;
 	*id_out_query_path = out_query_path->batCacheid;
 	*id_out_query_oid_path = out_query_oid_path->batCacheid;
@@ -248,3 +195,5 @@ error:
 
 	return rc;
 }
+
+} // extern "C"

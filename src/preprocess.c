@@ -40,7 +40,7 @@ GRAPHprefixsum(bat* id_output, bat* id_input) {
 		goto success;
 	}
 
-	capacity = *((oid*) Tloc(input, BUNlast(input)));
+	capacity = *((oid*) Tloc(input, BUNlast(input)) -1); // BUNlast is the position after the last element!
 	CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, capacity, TRANSIENT), MAL_MALLOC_FAIL);
 
 	count = BATcount(input);
@@ -147,6 +147,79 @@ error:
 	if(from) { BBPunfix(from->batCacheid); }
 	if(to) { BBPunfix(to->batCacheid); }
 	if(weights) { BBPunfix(weights->batCacheid); }
+	if(file) { fclose(file); }
+
+	return rc;
+}
+
+
+/**
+ *  Load a set of queries from the given text file
+ *  Only required for debugging & testing purposes.
+ */
+mal_export str
+GRAPHloadq(bat* ret_id_qfrom, bat* ret_id_qto, str* path) {
+	// declarations
+	const char* function_name = "graph.loadq";
+	str rc = MAL_SUCCEED; // function return code
+	BAT *qfrom = NULL, *qto = NULL; // created bats
+	const BUN COLnew_initial_capacity = 1024; // arbitrary value
+	FILE* file = NULL;
+	const int buffer_sz = 1024; // arbitrary value
+	char buffer[buffer_sz];
+	char* ptr = NULL; // pointer in the buffer
+	long long int tempc; // for converting input integers
+
+	// create the new bats
+	CHECK(qfrom = COLnew(0, TYPE_oid, COLnew_initial_capacity, TRANSIENT), MAL_MALLOC_FAIL);
+	CHECK(qto = COLnew(0, TYPE_oid, COLnew_initial_capacity, TRANSIENT), MAL_MALLOC_FAIL);
+
+	// open the input file
+	file = fopen(*path, "r");
+	CHECK(file != NULL, RUNTIME_FILE_NOT_FOUND);
+
+	while(!feof(file)){
+		ptr = fgets(buffer, buffer_sz, file);
+		if(ptr == NULL && feof(file)) break; // no characters to extract
+		CHECK(!ferror(file), RUNTIME_STREAM_INPUT);
+
+		char* p = buffer;
+		while(*p && GDKisspace(*p)) p++; // skip empty spaces
+		if(p - buffer >= buffer_sz) continue; // this line contains only spaces
+		if(*p == '#') continue; // comment, skip this line
+
+		tempc = strtoll(p, &ptr, 10); // source
+		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
+		oid src = (oid) tempc;
+
+		p = ptr; // move ahead
+
+		while(*p && GDKisspace(*p)) p++; // skip empty spaces
+		CHECK(p - buffer < buffer_sz, RUNTIME_LOAD_ERROR); // invalid format
+
+		tempc = strtoll(p, &ptr, 10); // to
+		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
+		oid dst = (oid) tempc;
+
+
+		CHECK(BUNappend(qfrom, &src, 0) == GDK_SUCCEED, MAL_MALLOC_FAIL);
+		CHECK(BUNappend(qto, &dst, 0) == GDK_SUCCEED, MAL_MALLOC_FAIL);
+	}
+
+	fclose(file);
+
+	BBPkeepref(qfrom->batCacheid);
+	BBPkeepref(qto->batCacheid);
+
+	// Return values
+	*ret_id_qfrom = qfrom->batCacheid;
+	*ret_id_qto = qto->batCacheid;
+
+	return rc;
+error:
+	// remove the created bats
+	if(qfrom) { BBPunfix(qfrom->batCacheid); }
+	if(qto) { BBPunfix(qto->batCacheid); }
 	if(file) { fclose(file); }
 
 	return rc;

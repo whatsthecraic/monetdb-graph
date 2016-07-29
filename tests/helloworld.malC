@@ -1,0 +1,7 @@
+(f0, t0, w0) := graph.load("/tmp/test.txt");
+(qfrom, qto) := graph.loadq("/tmp/testq.txt");
+(V, E, W) := graph.make(f0, t0, w0);
+(w, poid, ppath) := graph.spfw(V, E, W, qfrom, qto);
+
+io.print(qfrom);
+io.print(qto);

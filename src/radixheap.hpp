@@ -5,7 +5,7 @@
 #include <cstring>
 #include <limits>
 
-namespace graph {
+namespace monetdb {
 
 // Compute the most significant distinguishing index
 #if defined(__GNUG__) or defined(__clang__) // gcc & clang only
@@ -81,6 +81,35 @@ private:
 		if(d < bmin[bucketno]) bmin[bucketno] = d;
 	}
 
+
+	void pull0(){
+		assert(!empty());
+		if(size[0] > 0) return;
+
+		// find the first non empty bucket
+		int imin = 1;
+		while(size[imin] == 0) imin++;
+
+		// re-balance the heap
+		lastmin = bmin[imin];
+		pair* __restrict bucket = buckets[imin];
+		for(std::size_t j = 0, sz = size[imin]; j < sz; j++){
+			assert(get_bucket_index(bucket[j].d) < imin);
+			push0(bucket[j].v, bucket[j].d);
+		}
+
+		// update the control variables
+		bmin[imin] = inf;
+		size[imin] = 0;
+		if(capacity[imin] > capmin){ // shrink the bucket
+			delete[] buckets[imin];
+			buckets[imin] = new pair[capmin];
+			capacity[imin] = capmin;
+		}
+
+		assert(size[0] > 0);
+	}
+
 public:
 	RadixHeap() : lastmin(0), hsize(0) {
 		// initialise the buckets
@@ -103,39 +132,34 @@ public:
 		hsize++;
 	}
 
-	pair pop(){
-		assert(!empty());
-		// find the first non empty bucket
-		int imin = 0;
-		while(size[imin] == 0) imin++;
+	pair front(){
+		pull0();
+		return buckets[0][size[0] -1];
+	}
 
-		// re-balance the heap
-		if(imin > 0){
-			lastmin = bmin[imin];
-			pair* __restrict bucket = buckets[imin];
-			for(std::size_t j = 0, sz = size[imin]; j < sz; j++){
-				assert(get_bucket_index(bucket[j].d) < imin);
-				push0(bucket[j].v, bucket[j].d);
-			}
-
-			// update the control variables
-			bmin[imin] = inf;
-			size[imin] = 0;
-			if(capacity[imin] > capmin){ // shrink the bucket
-				delete[] bucket;
-				buckets[imin] = new pair[capmin];
-				capacity[imin] = capmin;
-			}
-		}
-
-		assert(size[0] > 0);
+	void pop(){
+		pull0();
 		size[0]--;
 		hsize--;
-		return buckets[0][size[0]];
 	}
 
 	bool empty() const noexcept {
 		return hsize == 0;
+	}
+
+	void clear() {
+		lastmin = 0;
+		if(empty()) return;
+		hsize = 0;
+		for(std::size_t i = 0; i < bsize; i++){
+			size[i] = 0;
+			bmin[i] = inf; // infinity
+			if(capacity[i] > capmin){
+				delete[] buckets[i];
+				buckets[i] = new pair[capmin];
+				capacity[i] = capmin;
+			}
+		}
 	}
 
 };

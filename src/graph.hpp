@@ -5,7 +5,7 @@
 #include <cstddef> // std::size_t
 #include <iostream>
 
-namespace graph {
+namespace monetdb {
 
 	template<typename V, typename W>
 	struct Edge {
@@ -83,7 +83,7 @@ namespace graph {
 			return vertex_count== 0 ? 0 : vertices[vertex_count -1];
 		}
 
-		iterator_make operator[] (V vertex_id) noexcept {
+		iterator_make operator[] (V vertex_id) const noexcept {
 			assert(vertex_id < size());
 			std::size_t offset = vertex_id == 0 ? 0 : vertices[vertex_id -1];
 			return iterator_make(edges + offset, weights + offset, edges + vertices[vertex_id]);

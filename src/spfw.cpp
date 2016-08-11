@@ -30,7 +30,7 @@ struct Input {
 	vertex_t* src;
 	vertex_t* dst;
 	weight_t* weights;
-	std::size_t size;
+	size_t size;
 };
 
 template<typename vertex_t, typename weight_t>

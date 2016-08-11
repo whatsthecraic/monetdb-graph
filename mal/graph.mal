@@ -25,7 +25,8 @@ function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat
   barrier chk2 := from_sz != weights_sz;
     raise IllegalArgument := "Invalid input size";
   exit chk2;
-  # it should check also whether it contains nil values ... 
+  # it should check also whether it contains nil values 
+  # maybe this should be implemented in C...
   
   (fs, perm) := algebra.subsort(from, false, false);
   ft := algebra.projection(perm, to);
@@ -40,3 +41,18 @@ end make;
 command spfw(V:bat[:oid], E:bat[:oid], W:bat[:lng], qf:bat[:oid], qt:bat[:oid]) (:bat[:lng], :bat[:oid], :bat[:oid])
 address GRAPHspfw
 comment "Shortest path queries";
+
+# Return the `partno' partition of `from' and `to' columns, out of `numpart' partitions.
+function scatter(from:bat[:oid], to:bat[:oid], partno:int, numpart:int) (:bat[:oid], :bat[:oid]);
+  # check inputs have the same input size
+  from_sz := bat.getCount(from);
+  to_sz := bat.getCount(to);
+  barrier chk1 := from_sz != to_sz;
+    raise IllegalArgument := "Invalid input size";
+  exit chk1;
+
+  part_from := bat.partition(from, numpart, partno);
+  part_to := bat.partition(to, numpart, partno);
+  
+  return (part_from, part_to);
+end scatter;

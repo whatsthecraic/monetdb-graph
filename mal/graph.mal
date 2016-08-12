@@ -1,4 +1,4 @@
-# Exporting the graph functions into monetdb
+# Exporting the graph functions to monetdb
 # ln -s graph.mal <monetdb>/lib/monetdb5
 module graph;
 
@@ -10,9 +10,13 @@ command loadq(:str) (:bat[:oid],:bat[:oid])
 address GRAPHloadq
 comment "Import a set of queries from the given file, where each line is <from> <to>"; 
 
+command save(path :str, qfrom :bat[:oid], qto :bat[:oid], weights :bat[:lng], poid :bat[:oid], ppath :bat[:oid])
+address GRAPHsave
+comment "Store the result of the operator to an output file, to be validated externally"; 
+
 command prefixsum(:bat[:oid]) :bat[:oid]
 address GRAPHprefixsum
-comment "Perform the prefix sum of the value in the BAT";
+comment "Perform the prefix sum of the values in the BAT";
 
 function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat[:oid], :bat[:lng]);
   # check inputs have the same input size

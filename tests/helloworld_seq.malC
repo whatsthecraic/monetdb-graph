@@ -1,0 +1,10 @@
+# load the graph and the query columns
+(f0, t0, w0) := graph.load("/tmp/graph10.txt");
+(qfrom, qto) := graph.loadq("/tmp/query2.txt");
+(V, E, W) := graph.make(f0, t0, w0);
+
+# execute
+(w, poid, ppath) := graph.spfw(V, E, W, qfrom, qto);
+
+# store the result for validation
+#graph.save("/tmp/validate.txt", qfrom, qto, w, poid, ppath)

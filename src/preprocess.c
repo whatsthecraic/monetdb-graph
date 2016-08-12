@@ -72,7 +72,7 @@ error:
 }
 
 /**
- *  Load a graph created with the app. randomgen into three bats from, to, weight.
+ *  Load a graph created with the app. graphgen into three bats from, to, weight.
  *  Only required for debugging & testing purposes.
  */
 mal_export str
@@ -107,22 +107,24 @@ GRAPHload(bat* ret_id_from, bat* ret_id_to, bat* ret_id_weights, str* path) {
 		if(p - buffer >= buffer_sz) continue; // this line contains only spaces
 		if(*p == '#') continue; // comment, skip this line
 
-		tempc = strtoll(p, &p, 10); // edge from
-		CHECK(tempc > 0, RUNTIME_LOAD_ERROR);
-		oid e_from = tempc -1; // nodes start from 1 in the randomgen format
+		tempc = strtoll(p, &ptr, 10); // edge from
+		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
+		oid e_from = tempc;
 
+		p = ptr; // move ahead
 		while(*p && GDKisspace(*p)) p++; // skip empty spaces
 		CHECK(p - buffer < buffer_sz, RUNTIME_LOAD_ERROR); // invalid format
 
 		tempc = strtoll(p, &p, 10); // edge to
-		CHECK(tempc > 0, RUNTIME_LOAD_ERROR);
-		oid e_to = tempc -1;
+		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
+		oid e_to = tempc;
 
+		p = ptr; // move ahead
 		while(*p && GDKisspace(*p)) p++;  // skip empty spaces
 		CHECK(p - buffer < buffer_sz, RUNTIME_LOAD_ERROR); // invalid format
 
 		tempc = strtoll(p, &p, 10); // edge weight
-		CHECK(tempc > 0, RUNTIME_LOAD_ERROR);
+		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
 		lng e_weight = tempc;
 
 		CHECK(BUNappend(from, &e_from, 0) == GDK_SUCCEED, MAL_MALLOC_FAIL);
@@ -185,7 +187,7 @@ GRAPHloadq(bat* ret_id_qfrom, bat* ret_id_qto, str* path) {
 
 		char* p = buffer;
 		while(*p && GDKisspace(*p)) p++; // skip empty spaces
-		if(p - buffer >= buffer_sz) continue; // this line contains only spaces
+		if(p - buffer >= buffer_sz || *p == '\0') continue; // this line only contains spaces
 		if(*p == '#') continue; // comment, skip this line
 
 		tempc = strtoll(p, &ptr, 10); // source
@@ -201,12 +203,16 @@ GRAPHloadq(bat* ret_id_qfrom, bat* ret_id_qto, str* path) {
 		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
 		oid dst = (oid) tempc;
 
-
 		CHECK(BUNappend(qfrom, &src, 0) == GDK_SUCCEED, MAL_MALLOC_FAIL);
 		CHECK(BUNappend(qto, &dst, 0) == GDK_SUCCEED, MAL_MALLOC_FAIL);
 	}
 
 	fclose(file);
+
+	// set the bats as read-only. As we are going to scatter them with BATslice, this will allow
+	// to create views instead of full partitioned copies
+	qfrom->S.restricted = BAT_READ;
+	qto->S.restricted = BAT_READ;
 
 	BBPkeepref(qfrom->batCacheid);
 	BBPkeepref(qto->batCacheid);
@@ -220,6 +226,68 @@ error:
 	// remove the created bats
 	if(qfrom) { BBPunfix(qfrom->batCacheid); }
 	if(qto) { BBPunfix(qto->batCacheid); }
+	if(file) { fclose(file); }
+
+	return rc;
+}
+
+
+/**
+ * Store the result of the shortest paths to a file in the disk, to be validated externally.
+ * Only required for debugging & testing purposes.
+ */
+mal_export str
+GRAPHsave(str* path, bat* id_qfrom, bat* id_qto, bat* id_weights, bat* id_poid, bat* id_ppath){
+	// declarations
+	const char* function_name = "graph.loadq";
+	str rc = MAL_SUCCEED; // function return code
+	BAT *qfrom = NULL, *qto = NULL, *weights = NULL, *poid = NULL, *ppath = NULL;
+	// array accessors
+	oid* __restrict aqfrom;
+	oid* __restrict aqto;
+	lng* __restrict aqweights;
+	oid* __restrict apoid;
+	oid* __restrict appath;
+	BUN q_sz = 0, poid_sz = 0, poid_cur = 0;
+	FILE* file = NULL;
+
+	// access the bat descriptors
+	qfrom = BATdescriptor(*id_qfrom);
+	CHECK(qfrom != NULL, RUNTIME_OBJECT_MISSING);
+	qto = BATdescriptor(*id_qto);
+	CHECK(qto != NULL, RUNTIME_OBJECT_MISSING);
+	weights = BATdescriptor(*id_weights);
+	CHECK(weights != NULL, RUNTIME_OBJECT_MISSING);
+	poid = BATdescriptor(*id_poid);
+	CHECK(poid != NULL, RUNTIME_OBJECT_MISSING);
+	ppath = BATdescriptor(*id_ppath);
+	CHECK(ppath != NULL, RUNTIME_OBJECT_MISSING);
+
+	// sanity checks
+	assert(BATcount(qfrom) == BATcount(qto) && "Size mismatch: |qfrom| != |qto|");
+	assert(BATcount(qfrom) == BATcount(weights) && "Size mismatch: |qfrom| != |weights|");
+
+	file = fopen(*path, "w");
+	CHECK(file != NULL, "Cannot open the output file");
+
+	aqfrom = (oid*) qfrom->theap.base;
+	aqto = (oid*) qto->theap.base;
+	aqweights = (lng*) weights->theap.base;
+	apoid = (oid*) poid->theap.base;
+	appath = (oid*) ppath->theap.base;
+	q_sz = BATcount(qfrom);
+	poid_sz = BATcount(poid);
+
+	for(BUN i = 0; i < q_sz; i++){
+		fprintf(file, "%zu -> %zu [%lld]: \n", aqfrom[i], aqto[i], aqweights[i]);
+	}
+
+error:
+	if(qfrom) { BBPunfix(qfrom->batCacheid); }
+	if(qto) { BBPunfix(qto->batCacheid); }
+	if(weights) { BBPunfix(weights->batCacheid); }
+	if(poid) { BBPunfix(poid->batCacheid); }
+	if(ppath) { BBPunfix(ppath->batCacheid); }
 	if(file) { fclose(file); }
 
 	return rc;

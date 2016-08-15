@@ -10,7 +10,7 @@
 #define CHECK( EXPR, ERROR ) if ( !(EXPR) ) \
 	{ rc = createException(MAL, function_name /*__FUNCTION__?*/, ERROR); goto error; }
 
-
+// Get the value in position p from the bat b of type oid
 static oid get(BAT* b, BUN p){
 	return *((oid*)Tloc(b, p));
 }
@@ -115,7 +115,7 @@ GRAPHload(bat* ret_id_from, bat* ret_id_to, bat* ret_id_weights, str* path) {
 		while(*p && GDKisspace(*p)) p++; // skip empty spaces
 		CHECK(p - buffer < buffer_sz, RUNTIME_LOAD_ERROR); // invalid format
 
-		tempc = strtoll(p, &p, 10); // edge to
+		tempc = strtoll(p, &ptr, 10); // edge to
 		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
 		oid e_to = tempc;
 
@@ -123,7 +123,7 @@ GRAPHload(bat* ret_id_from, bat* ret_id_to, bat* ret_id_weights, str* path) {
 		while(*p && GDKisspace(*p)) p++;  // skip empty spaces
 		CHECK(p - buffer < buffer_sz, RUNTIME_LOAD_ERROR); // invalid format
 
-		tempc = strtoll(p, &p, 10); // edge weight
+		tempc = strtoll(p, &ptr, 10); // edge weight
 		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
 		lng e_weight = tempc;
 
@@ -237,7 +237,7 @@ error:
  * Only required for debugging & testing purposes.
  */
 mal_export str
-GRAPHsave(str* path, bat* id_qfrom, bat* id_qto, bat* id_weights, bat* id_poid, bat* id_ppath){
+GRAPHsave(void* dummy, str* path, bat* id_qfrom, bat* id_qto, bat* id_weights, bat* id_poid, bat* id_ppath){
 	// declarations
 	const char* function_name = "graph.loadq";
 	str rc = MAL_SUCCEED; // function return code
@@ -249,7 +249,13 @@ GRAPHsave(str* path, bat* id_qfrom, bat* id_qto, bat* id_weights, bat* id_poid, 
 	oid* __restrict apoid;
 	oid* __restrict appath;
 	BUN q_sz = 0, poid_sz = 0, poid_cur = 0;
+	oid cur_oid; // current value
+	bool first_value; // flag to print a comma at the end of each value
 	FILE* file = NULL;
+
+	// silent the warning from the compiler for the unused parameter
+	// I cannot believe in C they still don't allow nameless parameters, so old
+	(void) dummy;
 
 	// access the bat descriptors
 	qfrom = BATdescriptor(*id_qfrom);
@@ -278,8 +284,29 @@ GRAPHsave(str* path, bat* id_qfrom, bat* id_qto, bat* id_weights, bat* id_poid, 
 	q_sz = BATcount(qfrom);
 	poid_sz = BATcount(poid);
 
+	cur_oid = qfrom->hseqbase;
+
 	for(BUN i = 0; i < q_sz; i++){
-		fprintf(file, "%zu -> %zu [%lld]: \n", aqfrom[i], aqto[i], aqweights[i]);
+		fprintf(file, "%zu -> %zu [%lld]: ", aqfrom[i], aqto[i], aqweights[i]);
+
+		first_value = true;
+		// move to the current oid
+		for( /* resume from the previous run */ ; poid_cur < poid_sz && apoid[poid_cur] < cur_oid; poid_cur++);
+		// print the path
+		for( /* resume from the previous run */ ; poid_cur < poid_sz && apoid[poid_cur] == cur_oid; poid_cur++) {\
+			// print the separator
+			if(first_value){
+				first_value = false;
+			} else {
+				fprintf(file, ", ");
+			}
+
+			// print the value
+			fprintf(file, "%zu", appath[poid_cur]);
+		}
+
+		fprintf(file, "\n");
+		cur_oid++;
 	}
 
 error:

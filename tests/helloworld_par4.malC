@@ -21,4 +21,5 @@ poid := mat.pack(poid0, poid1, poid2, poid3);
 ppath := mat.pack(ppath0, ppath1, ppath2, ppath3);
 
 # store the result for validation
-graph.save("/tmp/validate.txt", qfrom, qto, w, poid, ppath)
+graph.save("/tmp/validate_par4.txt", qfrom, qto, w, poid, ppath);
+io.print("Done");

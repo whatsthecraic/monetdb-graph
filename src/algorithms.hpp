@@ -111,7 +111,7 @@ public:
 			}
 		}
 
-		flush(size -1, contiguous_sources);
+		flush(size - contiguous_sources, contiguous_sources);
 	}
 
 };

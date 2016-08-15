@@ -1,0 +1,22 @@
+# load the graph and the query columns
+(f0, t0, w0) := graph.load("/tmp/graph10.txt");
+(qfrom, qto) := graph.loadq("/tmp/query2.txt");
+(V, E, W) := graph.make(f0, t0, w0);
+
+# scatter
+(qf0, qt0) := graph.scatter(qfrom, qto, 0, 2);
+(qf1, qt1) := graph.scatter(qfrom, qto, 1, 2);
+
+# execute
+(w0, poid0, ppath0) := graph.spfw(V, E, W, qf0, qt0);
+(w1, poid1, ppath1) := graph.spfw(V, E, W, qf1, qt1);
+
+# gather
+w := mat.pack(w0, w1);
+poid := mat.pack(poid0, poid1);
+io.print(poid);
+ppath := mat.pack(ppath0, ppath1);
+
+# store the result for validation
+graph.save("/tmp/validate_par2.txt", qfrom, qto, w, poid, ppath);
+io.print("Done");

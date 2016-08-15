@@ -7,4 +7,5 @@
 (w, poid, ppath) := graph.spfw(V, E, W, qfrom, qto);
 
 # store the result for validation
-#graph.save("/tmp/validate.txt", qfrom, qto, w, poid, ppath)
+graph.save("/tmp/validate.txt", qfrom, qto, w, poid, ppath);
+io.print("Done");

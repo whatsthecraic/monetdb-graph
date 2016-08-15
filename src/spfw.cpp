@@ -80,6 +80,7 @@ static void trampoline(BAT* q_from, BAT* q_to, BAT* q_weights,
 	spfw(query, graph, paths);
 
 	// almost done, we need to fill the shortest paths
+	size_t cur_oid = q_from->hseqbase;
 	size_t revlen_sz = paths.revlen.size();
 	size_t revpath_sz = paths.revpath.size();
 	assert(revlen_sz == query.size);
@@ -91,9 +92,10 @@ static void trampoline(BAT* q_from, BAT* q_to, BAT* q_weights,
 	for(size_t i = 0; i < revlen_sz; i++){
 		size_t pathlen_sz = paths.revlen[i];
 		for(size_t j = 0; j < pathlen_sz; j++, pos_oid++, pos_val++){
-			*pos_oid = i;
+			*pos_oid = cur_oid;
 			*pos_val = revpath[pathlen_sz -1 -j]; // revert the path
 		}
+		cur_oid++;
 		revpath += pathlen_sz;
 	}
 	BATsetcount(r_oid_paths, revpath_sz);
@@ -169,8 +171,7 @@ GRAPHspfw(bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_quer
 	}
 
 
-	BBPkeepref(*id_in_query_from); // TODO to be checked
-	BBPkeepref(*id_in_query_to);
+
 	BBPkeepref(out_query_weights->batCacheid);
 	BBPkeepref(out_query_path->batCacheid);
 	BBPkeepref(out_query_oid_path->batCacheid);
@@ -178,6 +179,8 @@ GRAPHspfw(bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_quer
 	*id_out_query_path = out_query_path->batCacheid;
 	*id_out_query_oid_path = out_query_oid_path->batCacheid;
 
+	BATfree(in_query_from);
+	BATfree(in_query_to);
 	BATfree(in_vertices);
 	BATfree(in_edges);
 	BATfree(in_weights);

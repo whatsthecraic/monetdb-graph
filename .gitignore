@@ -10,5 +10,8 @@
 # Makefile build
 /build
 
+# Link to switch the library between Eclipse and the Makefile build
+/libgraph_monetdb.so
+
 # Swap files
 *.swp

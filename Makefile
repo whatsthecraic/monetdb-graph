@@ -1,7 +1,7 @@
 #
 # Custom makefile to build the library for the monetdb operator
 # Note this only builds the library, you will still need to link monetdb, e.g. :
-# ln -s build/libgraph_monetdb.so <monetdb_build>/lib/monetdb5
+# ln -s build/libgraph_monetdb.so <monetdb_build>/lib/monetdb5/lib_graph.so
 # ln -s mal/graph.mal <monetdb_build>/lib/monetdb5
 # ln -s mal/autoload.mal <monetdb_build>/lib/monetdb5/autoload/50_graph.mal
 #
@@ -36,7 +36,7 @@ all: ${builddir}/${library}
 
 # Library to build
 ${builddir}/${library} : ${objects} | ${builddir}
-	${CXX} -shared ${LDFLAGS} -o $@
+	${CXX} -shared $? ${LDFLAGS} -o $@
 
 # According to https://www.gnu.org/software/make/manual/html_node/Pattern-Match.html#Pattern-Match
 # I would have expected that the rules:

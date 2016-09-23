@@ -20,9 +20,9 @@ comment "Perform the prefix sum of the values in the BAT";
 
 function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat[:oid], :bat[:lng]);
   # check inputs have the same input size
-  from_sz := bat.getCount(from);
-  to_sz := bat.getCount(to);
-  weights_sz := bat.getCount(weights);
+  from_sz := aggr.count(from);
+  to_sz := aggr.count(to);
+  weights_sz := aggr.count(weights);
   barrier chk1 := from_sz != to_sz;
     raise IllegalArgument := "Invalid input size";
   exit chk1;
@@ -49,8 +49,8 @@ comment "Shortest path queries";
 # Return the `partno' partition of `from' and `to' columns, out of `numpart' partitions.
 function scatter(from:bat[:oid], to:bat[:oid], partno:int, numpart:int) (:bat[:oid], :bat[:oid]);
   # check inputs have the same input size
-  from_sz := bat.getCount(from);
-  to_sz := bat.getCount(to);
+  from_sz := aggr.count(from);
+  to_sz := aggr.count(to);
   barrier chk1 := from_sz != to_sz;
     raise IllegalArgument := "Invalid input size";
   exit chk1;

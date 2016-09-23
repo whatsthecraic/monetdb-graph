@@ -1,0 +1,68 @@
+# generate the inputs
+# edges in the graph
+efrom := bat.new(:int);
+bat.append(efrom, 10);
+bat.append(efrom, 15);
+bat.append(efrom, 20);
+
+eto := bat.new(:int);
+bat.append(eto, 15);
+bat.append(eto, 25);
+bat.append(eto, 10);
+
+# query
+qfrom := bat.new(:int);
+bat.append(qfrom, 20);
+bat.append(qfrom, 20);
+bat.append(qfrom, 20);
+bat.append(qfrom, 17);
+bat.append(qfrom, 10);
+bat.append(qfrom, 10);
+
+qto := bat.new(:int);
+bat.append(qto, 15);
+bat.append(qto, 15);
+bat.append(qto, 18);
+bat.append(qto, 20);
+bat.append(qto, 25);
+bat.append(qto, 22);
+
+# concatenate
+c := algebra.copy(efrom);
+bat.append(c, eto);
+
+# group by
+(g, smpl, histo) := group.subgroup(c);
+
+# domain
+D := algebra.projection(smpl, c);
+io.print(g);
+
+efrom_oid := bat.partition(g, 2, 0);
+eto_oid := bat.partition(g, 2, 1);
+
+# now continue as usual
+# graph_make(efrom_oid, eto_id, weights?);
+
+# obtain the vertex IDs for qfrom and qto 
+cnt := aggr.count(qfrom);
+(qfrom_j1, l1) := algebra.subsemijoin(qfrom, D, nil :bat, nil :bat, false, cnt);
+(qfrom_j2, l2) := algebra.subsemijoin(qto, D, qfrom_j1, nil :bat, false, cnt);
+
+# qfrom_oid := nil :bat[:oid]; # causes a seg fault
+qfrom_oid := bat.new(:oid);
+qto_oid := l2;
+l1_cnt := aggr.count(l1);
+l2_cnt := aggr.count(l2);
+barrier chk1 := l1_cnt != l2_cnt;
+  (qfrom_j3, l3) := algebra.subsemijoin(qfrom, D, qfrom_j2, nil :bat, false, l2_cnt);
+  qfrom_oid := l3;
+  io.print(qfrom_oid);
+  io.print("branch 1");
+exit chk1;
+barrier chk2 := l1_cnt == l2_cnt;
+  qfrom_oid := l1;
+  io.print("branch 2");
+exit chk2;
+
+# invoke the spfw on qfrom_oid, qto_oid, efrom_oid, eto_oid

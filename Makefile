@@ -6,11 +6,23 @@
 # ln -s mal/autoload.mal <monetdb_build>/lib/monetdb5/autoload/50_graph.mal
 #
 
+# build path for monetdb
+hostname := $(shell cat /etc/hostname)
+ifeq ($(hostname), sebastian) # home
+monetdbpath := ${HOME}/workspace/monetdb/build/
+else ifeq ($(hostname), athens.da.cwi.nl) # cwi workstation
+monetdbpath := /ufs/dleo/workspace/monetdb/build/
+else
+$(error Invalid host `$(hostname)')
+endif
+
 # Compiler & linker settings
-common_flags := -O0 -g -fPIC -I/ufs/dleo/workspace/monetdb/build/include/monetdb/
+includedir := ${monetdbpath}/include/monetdb/
+libdir := ${monetdbpath}/lib/
+common_flags := -O0 -g -fPIC -I${includedir}
 CFLAGS := ${common_flags}
 CXXFLAGS := -std=c++11 ${common_flags}
-LDFLAGS := -L/ufs/dleo/workspace/monetdb/build/lib -lmonetdb5
+LDFLAGS := -L${libdir} -lmonetdb5
 
 # List of the sources to compile
 sources := preprocess.c spfw.cpp

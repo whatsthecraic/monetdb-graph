@@ -7,10 +7,10 @@
 #
 
 # Compiler & linker settings
-common_flags := -O3 -fPIC -I/ufs/dleo/workspace/monetdb/build/current/include/monetdb
+common_flags := -O0 -g -fPIC -I/ufs/dleo/workspace/monetdb/build/include/monetdb/
 CFLAGS := ${common_flags}
 CXXFLAGS := -std=c++11 ${common_flags}
-LDFLAGS := -L/ufs/dleo/workspace/monetdb/build/current/lib -lmonetdb5
+LDFLAGS := -L/ufs/dleo/workspace/monetdb/build/lib -lmonetdb5
 
 # List of the sources to compile
 sources := preprocess.c spfw.cpp
@@ -36,7 +36,7 @@ all: ${builddir}/${library}
 
 # Library to build
 ${builddir}/${library} : ${objects} | ${builddir}
-	${CXX} -shared $? ${LDFLAGS} -o $@
+	${CXX} -shared $^ ${LDFLAGS} -o $@
 
 # According to https://www.gnu.org/software/make/manual/html_node/Pattern-Match.html#Pattern-Match
 # I would have expected that the rules:

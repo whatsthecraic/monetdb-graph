@@ -1,14 +1,21 @@
+#include "monetdb_config.h" // this should be at the top
+
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 // MonetDB include files
-#include "monetdb_config.h"
 #include "mal_exception.h"
 
-
+#if !defined(NDEBUG) /* debug only */
+#define _CHECK_ERRLINE_EXPAND(LINE) #LINE
+#define _CHECK_ERRLINE(LINE) _CHECK_ERRLINE_EXPAND(LINE)
+#define _CHECK_ERRMSG(EXPR, ERROR) "[" __FILE__ ":" _CHECK_ERRLINE(__LINE__) "] " ERROR ": `" #EXPR "'"
+#else /* release mode */
+#define _CHECK_ERRMSG(EXPR, ERROR) ERROR
+#endif
 #define CHECK( EXPR, ERROR ) if ( !(EXPR) ) \
-	{ rc = createException(MAL, function_name /*__FUNCTION__?*/, ERROR); goto error; }
+	{ rc = createException(MAL, function_name /*__FUNCTION__?*/, _CHECK_ERRMSG( EXPR, ERROR ) ); goto error; }
 
 // Get the value in position p from the bat b of type oid
 static oid get(BAT* b, BUN p){
@@ -33,30 +40,44 @@ GRAPHprefixsum(bat* id_output, bat* id_input) {
 	CHECK(input != NULL, RUNTIME_OBJECT_MISSING);
 	CHECK(input->T.nonil, ILLEGAL_ARGUMENT);
 	CHECK(input->hseqbase == 0, ILLEGAL_ARGUMENT);
-	CHECK(input->T.type == TYPE_oid, ILLEGAL_ARGUMENT);
+	CHECK(input->T.type == TYPE_oid || input->T.type == TYPE_void, ILLEGAL_ARGUMENT);
 
 	if(BATcount(input) == 0){ // edge case
 		CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, 0, TRANSIENT), MAL_MALLOC_FAIL);
 		goto success;
 	}
 
-	capacity = *((oid*) Tloc(input, BUNlast(input)) -1); // BUNlast is the position after the last element!
-	CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, capacity, TRANSIENT), MAL_MALLOC_FAIL);
+	if(input->T.type == TYPE_oid){
+		// Standard case, the BAT contains a sorted sequence of OIDs
+		capacity = *((oid*) Tloc(input, BUNlast(input)) -1); // BUNlast is the position after the last element!
+		CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, capacity, TRANSIENT), MAL_MALLOC_FAIL);
 
-	count = BATcount(input);
-	do {
-		next = get(input, p);
+		count = BATcount(input);
+		do {
+			next = get(input, p);
 
-		// fill empty vertices
-		for( ; base < next; base++ ) BUNappend(output, &sum, 0);
+			// fill empty vertices
+			for( ; base < next; base++ ) BUNappend(output, &sum, 0);
 
-		base = next;
-		// sum the number of equal src vertices
-		for ( ; p < count && get(input, p) == base; p++ ) sum++;
-		BUNappend(output, &sum, 0);
+			base = next;
+			// sum the number of equal src vertices
+			for ( ; p < count && get(input, p) == base; p++ ) sum++;
+			BUNappend(output, &sum, 0);
 
-		base++; // move to the next value
-	} while( p < count );
+			base++; // move to the next value
+		} while( p < count );
+
+	} else {
+		assert(input->T.type == TYPE_void);
+		// TYPE_void is an optimisation where the BAT holds a sequence of IDs [seqbase, seqbase+1, ..., seqbase+cnt -1]
+		// This can happen in the extreme case where each vertex has only an outgoing edge. We just materialise the BAT
+		// with the sequence of oids
+		capacity = BATcount(input);
+		CHECK(output = COLnew(input->hseqbase /*=0*/, TYPE_oid, capacity, TRANSIENT), MAL_MALLOC_FAIL);
+		for(oid i = input->hseqbase; i < capacity; i++){
+			BUNappend(output, &i, FALSE);
+		}
+	}
 
 success:
 	BBPunfix(input->batCacheid);

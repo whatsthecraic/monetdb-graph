@@ -61,7 +61,7 @@ static void trampoline(BAT* q_from, BAT* q_to, BAT* q_weights,
 	Input<vertex_t, weight_t> query = {
 		 reinterpret_cast<vertex_t*>(q_from->theap.base),
 		 reinterpret_cast<vertex_t*>(q_to->theap.base),
-		 reinterpret_cast<weight_t*>(q_weights->theap.base),
+		 q_weights ? reinterpret_cast<weight_t*>(q_weights->theap.base) : nullptr,
 		 BATcount(q_from)
 	};
 
@@ -69,7 +69,7 @@ static void trampoline(BAT* q_from, BAT* q_to, BAT* q_weights,
 	Input<vertex_t, weight_t> graph = {
 		reinterpret_cast<vertex_t*>(g_vertices->theap.base),
 		reinterpret_cast<vertex_t*>(g_edges->theap.base),
-		reinterpret_cast<weight_t*>(g_weights->theap.base),
+		g_weights ? reinterpret_cast<weight_t*>(g_weights->theap.base) : nullptr,
 		BATcount(g_vertices)
 	};
 
@@ -110,14 +110,21 @@ static void trampoline(BAT* q_from, BAT* q_to, BAT* q_weights,
  ******************************************************************************/
 extern "C" {
 
+#if !defined(NDEBUG) /* debug only */
+#define _CHECK_ERRLINE_EXPAND(LINE) #LINE
+#define _CHECK_ERRLINE(LINE) _CHECK_ERRLINE_EXPAND(LINE)
+#define _CHECK_ERRMSG(EXPR, ERROR) "[" __FILE__ ":" _CHECK_ERRLINE(__LINE__) "] " ERROR ": `" #EXPR "'"
+#else /* release mode */
+#define _CHECK_ERRMSG(EXPR, ERROR) ERROR
+#endif
 #define CHECK( EXPR, ERROR ) if ( !(EXPR) ) \
-	{ rc = createException(MAL, function_name /*__FUNCTION__?*/, ERROR); goto error; }
+	{ rc = createException(MAL, function_name /*__FUNCTION__?*/, _CHECK_ERRMSG( EXPR, ERROR ) ); goto error; }
 
 
 #define BATfree( b ) if(b) { BBPunfix(b->batCacheid); }
 
 mal_export str
-GRAPHspfw(bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_query_path,
+GRAPHspfw(bat* id_out_query_from, bat* id_out_query_to, bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_query_path,
 		bat* id_in_vertices, bat* id_in_edges, bat* id_in_weights, bat* id_in_query_from, bat* id_in_query_to) noexcept {
 	str rc = MAL_SUCCEED;
 	const char* function_name = "graph.spfw";
@@ -126,6 +133,8 @@ GRAPHspfw(bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_quer
 	BAT* in_weights = nullptr;
 	BAT* in_query_from = nullptr;
 	BAT* in_query_to = nullptr;
+	BAT* out_query_from = nullptr;
+	BAT* out_query_to = nullptr;
 	BAT* out_query_weights = nullptr;
 	BAT* out_query_oid_path = nullptr;
 	BAT* out_query_path = nullptr;

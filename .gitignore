@@ -3,6 +3,7 @@
 /.project
 /.settings/
 /symbols_c.xml
+/symbols_cxx.xml
 
 # Eclipse builds
 /Debug/

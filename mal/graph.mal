@@ -23,12 +23,6 @@ function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat
   from_sz := aggr.count(from);
   to_sz := aggr.count(to);
   weights_sz := aggr.count(weights);
-  barrier chk1 := from_sz != to_sz;
-    raise IllegalArgument := "Invalid input size";
-  exit chk1;
-  barrier chk2 := from_sz != weights_sz;
-    raise IllegalArgument := "Invalid input size";
-  exit chk2;
   # it should check also whether it contains nil values 
   # maybe this should be implemented in C...
   
@@ -42,9 +36,9 @@ function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat
   return (fs_ps, ft, fw);
 end make;
 
-command spfw(V:bat[:oid], E:bat[:oid], W:bat[:lng], qf:bat[:oid], qt:bat[:oid]) (:bat[:lng], :bat[:oid], :bat[:oid])
-address GRAPHspfw
-comment "Shortest path queries";
+command spfw(qf:bat[:oid], qt:bat[:oid], V:bat[:oid], E:bat[:oid]) (:bat[:oid], :bat[:oid])
+address GRAPHconnected
+comment "Filter out the tuples that are connected in the graph, regardless of their distance";
 
 # Return the `partno' partition of `from' and `to' columns, out of `numpart' partitions.
 function scatter(from:bat[:oid], to:bat[:oid], partno:int, numpart:int) (:bat[:oid], :bat[:oid]);

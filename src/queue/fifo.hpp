@@ -16,8 +16,8 @@ namespace monetdb {
 namespace fifo_internal {
     template<typename V, typename W>
     struct pair{
-        V v;
-        W d;
+        V dst;
+        W cost;
     };
 
     template<typename V, typename W>
@@ -94,7 +94,7 @@ public:
         return startpos == endpos;
     }
 
-    void clear() const{
+    void clear() {
         startpos = endpos = 0;
 
         // shall we resize the queue to the initial capacity?

@@ -58,7 +58,7 @@ static void execute(graph_t<W>& graph, query_t<W>& query){
  ******************************************************************************/
 template<typename weight_t>
 static void trampoline(
-        BAT* out_query_from, BAT* out_query_to, BAT* out_query_weights,
+        BAT* out_query_filter, BAT* out_query_weights,
         BAT* out_oid_paths, BAT* out_paths,
 		BAT* g_vertices, BAT* g_edges, BAT* g_weights,
 		BAT* q_from, BAT* q_to
@@ -76,24 +76,22 @@ static void trampoline(
     );
 
 	// prepare the query params
-    assert(BATcapacity(out_query_from) == BATcapacity(out_query_to));
-    assert(out_query_weights == nullptr || BATcapacity(out_query_weights) == BATcapacity(out_query_from));
+    assert(BATcapacity(out_query_filter) >= BATcount(q_from));
+    assert(out_query_weights == nullptr || BATcapacity(out_query_weights) == BATcapacity(out_query_filter));
 	query_t query (
         /* in_src = */ reinterpret_cast<vertex_t*>(q_from->theap.base),
         /* in_dst = */ reinterpret_cast<vertex_t*>(q_to->theap.base),
         /* in_size = */ BATcount(q_from),
-        /* out_src = */ reinterpret_cast<vertex_t*>(out_query_from->theap.base),
-        /* out_dst = */ reinterpret_cast<vertex_t*>(out_query_to->theap.base),
+        /* out_src = */ reinterpret_cast<vertex_t*>(out_query_filter->theap.base),
         /* out_cost = */ out_query_weights ? reinterpret_cast<cost_t*>(out_query_weights->theap.base) : nullptr,
-        /* out_capacity */ BATcapacity(out_query_from)
+        /* out_capacity */ BATcapacity(out_query_filter)
 	);
 
 	// execute the operator
 	execute(graph, query);
 
 	// report the number of values joined
-	BATsetcount(out_query_from, query.count());
-	BATsetcount(out_query_to, query.count());
+	BATsetcount(out_query_filter, query.count());
 	if(out_query_weights)
 		BATsetcount(out_query_weights, query.count());
 
@@ -143,7 +141,7 @@ static void trampoline(
 
 static str
 handle_request(
-	   bat* id_out_query_from, bat* id_out_query_to, bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_query_path,
+	   bat* id_out_filter, bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_query_path,
 	   bat* id_in_query_from, bat* id_in_query_to, bat* id_in_vertices, bat* id_in_edges, bat* id_in_weights) noexcept {
 	str rc = MAL_SUCCEED;
 	const char* function_name = "graph.spfw";
@@ -152,8 +150,7 @@ handle_request(
 	BAT* in_weights = nullptr;
 	BAT* in_query_from = nullptr;
 	BAT* in_query_to = nullptr;
-	BAT* out_query_from = nullptr;
-	BAT* out_query_to = nullptr;
+	BAT* out_query_filter = nullptr;
 	BAT* out_query_weights = nullptr;
 	BAT* out_query_oid_path = nullptr;
 	BAT* out_query_path = nullptr;
@@ -184,10 +181,8 @@ handle_request(
 	CHECK(BATcount(in_query_from) == BATcount(in_query_to), ILLEGAL_ARGUMENT ": the input columns have different sizes");
 
 	// allocate the output vectors
-	out_query_from = COLnew(in_query_from->hseqbase, TYPE_oid, BATcount(in_query_from), TRANSIENT);
-    CHECK(out_query_from != nullptr, MAL_MALLOC_FAIL);
-    out_query_to = COLnew(in_query_from->hseqbase, TYPE_oid, BATcount(in_query_from), TRANSIENT);
-    CHECK(out_query_to != nullptr, MAL_MALLOC_FAIL);
+	out_query_filter = COLnew(in_query_from->hseqbase, TYPE_oid, BATcount(in_query_from), TRANSIENT);
+    CHECK(out_query_filter != nullptr, MAL_MALLOC_FAIL);
 	if(compute_path_cost){
         out_query_weights = COLnew(in_query_from->hseqbase, in_weights->ttype, BATcount(in_query_from), TRANSIENT);
         CHECK(out_query_weights != nullptr, MAL_MALLOC_FAIL);
@@ -195,12 +190,12 @@ handle_request(
 	// TODO Disabled for the time being
 //	out_query_oid_path = COLnew(in_query_from->hseqbase, TYPE_oid, 0, TRANSIENT);
 //	CHECK(out_query_oid_path != nullptr, MAL_MALLOC_FAIL);
-//	out_query_path = COLnew(in_query_from->hseqbase, TYPE_oid, 0, TRANSIENT);
+//	out_query_path = COLnew(in_query_from->hseqbase, TYPE_oid, 0	BATsetcount(out_query_to, query.count());, TRANSIENT);
 //	CHECK(out_query_path != nullptr, MAL_MALLOC_FAIL);
 
 	try {
 	    if(!graph_has_weights){
-            trampoline<void>(out_query_from, out_query_to, out_query_weights, out_query_oid_path, out_query_path,
+            trampoline<void>(out_query_filter, out_query_weights, out_query_oid_path, out_query_path,
                     in_vertices, in_edges, in_weights, in_query_from, in_query_to);
 	    } else {
 	        CHECK(0, "NOT IMPLEMENTED");
@@ -212,10 +207,8 @@ handle_request(
 	}
 
 	// report the joined columns
-	BBPkeepref(out_query_from->batCacheid);
-	*id_out_query_from = out_query_from->batCacheid;
-	BBPkeepref(out_query_to->batCacheid);
-	*id_out_query_to = out_query_to->batCacheid;
+	BBPkeepref(out_query_filter->batCacheid);
+	*id_out_filter = out_query_filter->batCacheid;
 
 	// does the user want the final weight?
 	if(compute_path_cost) {
@@ -258,16 +251,15 @@ extern "C" {
 
 // Only check which qfrom are connected to qto
 str GRAPHconnected(
-	bat* id_out_query_from, bat* id_out_query_to,
+	bat* id_out_filter,
 	bat* id_in_query_from, bat* id_in_query_to, bat* id_in_vertices, bat* id_in_edges
 ) noexcept {
 	return handle_request(
 			// Output parameters
-			/* id_out_query_from = */id_out_query_from,
-			/* id_out_query_from = */ id_out_query_to,
+			/* id_out_filter = */ id_out_filter,
 			/* id_out_query_weight = */ nullptr,
 			/* id_out_query_oid_path = */ nullptr,
-			/* bat* id_out_query_path = */ nullptr,
+			/* id_out_query_path = */ nullptr,
 			// Input parameters
 			/* id_in_query_from = */ id_in_query_from,
 			/* id_in_query_to = */ id_in_query_to,

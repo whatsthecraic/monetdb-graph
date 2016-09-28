@@ -24,18 +24,17 @@ class Query{
     bool query_compute_path; // do we want to compute the actual path?
 
     // output parameters
-    vertex_t* output_src;
-    vertex_t* output_dst;
+    vertex_t* output_filter;
     cost_t* output_cost;
     const std::size_t output_capacity; // size of the arrays src/dst/cost
     std::size_t output_last; // last position filled in the arrays src/dst/cost
 
 public:
     Query(vertex_t* query_src, vertex_t* query_dst, std::size_t query_sz,
-		  vertex_t* output_src, vertex_t* output_dst, cost_t* output_cost, std::size_t output_capacity) :
+		  vertex_t* output_filter, cost_t* output_cost, std::size_t output_capacity) :
               query_src(query_src), query_dst(query_dst), query_size(query_sz),
               query_compute_path(false),
-              output_src(output_src), output_dst(output_dst), output_cost(output_cost), output_capacity(output_capacity), output_last(-1){
+			  output_filter(output_filter), output_cost(output_cost), output_capacity(output_capacity), output_last(-1){
 
     }
 
@@ -70,8 +69,7 @@ public:
     void join(std::size_t i) noexcept {
         output_last++;
         assert(output_last < output_capacity);
-        output_src[output_last] = source(i);
-        output_dst[output_last] = dest(i);
+        output_filter[output_last] = i;
     }
 
     void join(std::size_t i, cost_t cost) noexcept {

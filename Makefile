@@ -19,7 +19,7 @@ endif
 # Compiler & linker settings
 includedir := ${monetdbpath}/include/monetdb/
 libdir := ${monetdbpath}/lib/
-common_flags := -O0 -g -fPIC -I${includedir}
+common_flags := -O0 -g -fPIC -I${includedir} -Isrc/
 CFLAGS := ${common_flags}
 CXXFLAGS := -std=c++11 ${common_flags}
 LDFLAGS := -L${libdir} -lmonetdb5

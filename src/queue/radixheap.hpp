@@ -9,7 +9,7 @@ namespace monetdb {
 
 // Compute the most significant distinguishing index
 #if defined(__GNUG__) or defined(__clang__) // gcc & clang only
-namespace internal {
+namespace radixheap_internal {
 	template<typename T>
 	typename std::enable_if<sizeof(T) == 4, int>::type MSD(T a, T b){
 		if(a == b) return 0; // edge case
@@ -58,7 +58,7 @@ private:
 
 
 	int get_bucket_index(distance_t key){
-		return internal::MSD(lastmin, key);
+		return radixheap_internal::MSD(lastmin, key);
 	}
 
 	// append the given item into the bucket

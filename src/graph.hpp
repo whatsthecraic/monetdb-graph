@@ -10,15 +10,26 @@ namespace monetdb {
     // Graph with weights associated to edges
 
 	template<typename V, typename W = void>
-	struct Edge {
-		V v;
-		W w;
+	class Edge {
+	public:
+	    using vertex_t = V;
+	    using weight_t = W;
+	private:
+		const vertex_t v;
+		const weight_t  w;
+	public:
+		Edge(V dst, W cost) : v(dst), w(cost) { };
+
+		vertex_t dest() const { return v; }
+		weight_t dest() const { return w; }
 	};
 
 	template<typename V, typename W = void>
 	class Graph {
 	public:
-		typedef Edge<V, W> edge_t;
+	    using edge_t = typename Edge<V, W>;
+	    using vertex_t = edge_t::vertex_t;
+	    using weight_t = edge_t::weight_t;
 		class iterator_fwd;
 		class iterator_make;
 
@@ -96,14 +107,27 @@ namespace monetdb {
 	// Graph without weights associated to edges
 
     template<typename V>
-    struct Edge<V, void>{
-        V v;
+    class Edge<V, void> {
+    public:
+        using vertex_t = V;
+        using weight_t = std::size_t;
+
+    private:
+        const vertex_t v;
+
+    public:
+        Edge(V dst) : v(dst) { };
+
+        vertex_t dest() const { return v; }
+        weight_t cost() const { return 1; }
     };
 
     template<typename V>
     class Graph<V, void> {
     public:
-        typedef Edge<V> edge_t;
+        using edge_t = typename Edge<V>;
+        using vertex_t = edge_t::vertex_t;
+        using weight_t = edge_t::weight_t;
         class iterator_fwd;
         class iterator_make;
 

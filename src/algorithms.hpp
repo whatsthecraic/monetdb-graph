@@ -151,11 +151,6 @@ public:
 };
 
 
-template <typename V>
-class SequentialBFS : public SequentialAlgorithm<, void>{
-
-};
-
 
 } /* namespace graph */
 

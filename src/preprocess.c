@@ -7,6 +7,8 @@
 // MonetDB include files
 #include "mal_exception.h"
 
+#include "debug.h"
+
 #if !defined(NDEBUG) /* debug only */
 #define _CHECK_ERRLINE_EXPAND(LINE) #LINE
 #define _CHECK_ERRLINE(LINE) _CHECK_ERRLINE_EXPAND(LINE)
@@ -41,6 +43,11 @@ GRAPHprefixsum(bat* id_output, bat* id_input) {
 	CHECK(input->T.nonil, ILLEGAL_ARGUMENT);
 	CHECK(input->hseqbase == 0, ILLEGAL_ARGUMENT);
 	CHECK(input->T.type == TYPE_oid || input->T.type == TYPE_void, ILLEGAL_ARGUMENT);
+	CHECK(BATtordered(input), ILLEGAL_ARGUMENT ": the input column is not sorted");
+
+	// DEBUG ONLY
+	printf("<<graph.prefixsum>>\n"); fflush(stdout);
+	bat_debug(input);
 
 	if(BATcount(input) == 0){ // edge case
 		CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, 0, TRANSIENT), MAL_MALLOC_FAIL);
@@ -78,6 +85,8 @@ GRAPHprefixsum(bat* id_output, bat* id_input) {
 			BUNappend(output, &i, FALSE);
 		}
 	}
+
+	bat_debug(output);
 
 success:
 	BBPunfix(input->batCacheid);

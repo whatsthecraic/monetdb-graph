@@ -17,6 +17,8 @@ extern "C" {
 }
 #undef throw // this is a keyword in C++
 
+#include "debug.h" // DEBUG ONLY
+
 using namespace monetdb;
 
 using std::size_t; // omnipresent
@@ -60,8 +62,8 @@ template<typename weight_t>
 static void trampoline(
         BAT* out_query_filter, BAT* out_query_weights,
         BAT* out_oid_paths, BAT* out_paths,
-		BAT* g_vertices, BAT* g_edges, BAT* g_weights,
-		BAT* q_from, BAT* q_to
+		BAT* q_perm, BAT* q_from, BAT* q_to,
+		BAT* g_vertices, BAT* g_edges, BAT* g_weights
 ) {
 	using graph_t = graph_t<weight_t>;
     using cost_t = cost_t<weight_t>;
@@ -79,6 +81,7 @@ static void trampoline(
     assert(BATcapacity(out_query_filter) >= BATcount(q_from));
     assert(out_query_weights == nullptr || BATcapacity(out_query_weights) == BATcapacity(out_query_filter));
 	query_t query (
+		/* in_perm = */ BATttype(q_perm) == TYPE_oid ? reinterpret_cast<vertex_t*>(q_perm->theap.base) : /* TYPE_void */ nullptr,
         /* in_src = */ reinterpret_cast<vertex_t*>(q_from->theap.base),
         /* in_dst = */ reinterpret_cast<vertex_t*>(q_to->theap.base),
         /* in_size = */ BATcount(q_from),
@@ -120,7 +123,6 @@ static void trampoline(
 //	BATsetcount(q_weights, revlen_sz);
 }
 
-
 /******************************************************************************
  *                                                                            *
  *  Access the input BATs and instantiate the output BATs                     *
@@ -142,12 +144,15 @@ static void trampoline(
 static str
 handle_request(
 	   bat* id_out_filter, bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_query_path,
-	   bat* id_in_query_from, bat* id_in_query_to, bat* id_in_vertices, bat* id_in_edges, bat* id_in_weights) noexcept {
+	   bat* id_in_query_perm, bat* id_in_query_from, bat* id_in_query_to,
+	   bat* id_in_vertices, bat* id_in_edges, bat* id_in_weights
+	   ) noexcept {
 	str rc = MAL_SUCCEED;
 	const char* function_name = "graph.spfw";
 	BAT* in_vertices = nullptr;
 	BAT* in_edges = nullptr;
 	BAT* in_weights = nullptr;
+	BAT* in_query_perm = nullptr;
 	BAT* in_query_from = nullptr;
 	BAT* in_query_to = nullptr;
 	BAT* out_query_filter = nullptr;
@@ -166,22 +171,27 @@ handle_request(
 	    in_weights = BATdescriptor(*id_in_weights);
         CHECK(in_weights != nullptr, RUNTIME_OBJECT_MISSING);
 	}
+	in_query_perm = BATdescriptor(*id_in_query_perm);
+	CHECK(in_query_perm != nullptr, RUNTIME_OBJECT_MISSING);
 	in_query_from = BATdescriptor(*id_in_query_from);
 	CHECK(in_query_from != nullptr, RUNTIME_OBJECT_MISSING);
 	in_query_to = BATdescriptor(*id_in_query_to);
 	CHECK(in_query_to != nullptr, RUNTIME_OBJECT_MISSING);
 
-	// validate input bats properties
+	// validate the properties of the input BATs
+	CHECK(ATOMtype(BATttype(in_query_perm)) == TYPE_oid, ILLEGAL_ARGUMENT);
 	CHECK(BATttype(in_query_from) == TYPE_oid, ILLEGAL_ARGUMENT);
 	CHECK(BATttype(in_query_to) == TYPE_oid, ILLEGAL_ARGUMENT);
 	CHECK(BATttype(in_vertices) == TYPE_oid, ILLEGAL_ARGUMENT);
 	CHECK(BATttype(in_edges) == TYPE_oid, ILLEGAL_ARGUMENT);
 
 	// qfrom && qto must have the same size
-	CHECK(BATcount(in_query_from) == BATcount(in_query_to), ILLEGAL_ARGUMENT ": the input columns have different sizes");
+	CHECK(  BATcount(in_query_perm) == BATcount(in_query_from) &&
+	        BATcount(in_query_from) == BATcount(in_query_to),
+	        ILLEGAL_ARGUMENT ": the input columns have different sizes");
 
 	// allocate the output vectors
-	out_query_filter = COLnew(in_query_from->hseqbase, TYPE_oid, BATcount(in_query_from), TRANSIENT);
+	out_query_filter = COLnew(in_query_perm->hseqbase, TYPE_oid, BATcount(in_query_from), TRANSIENT);
     CHECK(out_query_filter != nullptr, MAL_MALLOC_FAIL);
 	if(compute_path_cost){
         out_query_weights = COLnew(in_query_from->hseqbase, in_weights->ttype, BATcount(in_query_from), TRANSIENT);
@@ -193,10 +203,18 @@ handle_request(
 //	out_query_path = COLnew(in_query_from->hseqbase, TYPE_oid, 0	BATsetcount(out_query_to, query.count());, TRANSIENT);
 //	CHECK(out_query_path != nullptr, MAL_MALLOC_FAIL);
 
+	// DEBUG ONLY
+	printf("<<graph.spfw>>\n"); fflush(stdout);
+	bat_debug(in_query_perm);
+	bat_debug(in_query_from);
+	bat_debug(in_query_to);
+	bat_debug(in_vertices);
+	bat_debug(in_edges);
+
 	try {
 	    if(!graph_has_weights){
             trampoline<void>(out_query_filter, out_query_weights, out_query_oid_path, out_query_path,
-                    in_vertices, in_edges, in_weights, in_query_from, in_query_to);
+                    in_query_perm, in_query_from, in_query_to, in_vertices, in_edges, in_weights);
 	    } else {
 	        CHECK(0, "NOT IMPLEMENTED");
 	    }
@@ -230,11 +248,13 @@ handle_request(
 
 	return rc;
 error:
+	BATfree(in_query_perm);
 	BATfree(in_query_from);
 	BATfree(in_query_to);
 	BATfree(in_vertices);
 	BATfree(in_edges);
 	BATfree(in_weights);
+	BATfree(out_query_filter);
 	BATfree(out_query_weights);
 	BATfree(out_query_oid_path);
 	BATfree(out_query_path);
@@ -252,7 +272,8 @@ extern "C" {
 // Only check which qfrom are connected to qto
 str GRAPHconnected(
 	bat* id_out_filter,
-	bat* id_in_query_from, bat* id_in_query_to, bat* id_in_vertices, bat* id_in_edges
+	bat* id_in_query_perm, bat* id_in_query_from, bat* id_in_query_to,
+	bat* id_in_vertices, bat* id_in_edges
 ) noexcept {
 	return handle_request(
 			// Output parameters
@@ -261,6 +282,7 @@ str GRAPHconnected(
 			/* id_out_query_oid_path = */ nullptr,
 			/* id_out_query_path = */ nullptr,
 			// Input parameters
+			/* id_in_query_perm = */ id_in_query_perm,
 			/* id_in_query_from = */ id_in_query_from,
 			/* id_in_query_to = */ id_in_query_to,
 			/* id_in_vertices = */ id_in_vertices,

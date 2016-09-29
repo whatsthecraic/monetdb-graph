@@ -26,18 +26,18 @@ static oid get(BAT* b, BUN p){
 
 // MAL interface
 mal_export str
-GRAPHprefixsum(bat* id_output, bat* id_input) {
+GRAPHprefixsum(bat* id_output, bat* id_input, lng* ptr_domain_cardinality) {
 	const char* function_name = "graph.prefixsum";
 	str rc = MAL_SUCCEED;
 	BAT *input = NULL, *output = NULL;
-	BUN capacity = 0; // the capacity of the new column
-	BUN count = 0;
-	BUN p = 0; // position in the bat
-	oid base = 0, next = 0, sum = 0;
-
 	*id_output = bat_nil;
+	BUN cardinality = 0;
+
+	CHECK(id_input != NULL, ILLEGAL_ARGUMENT);
+	CHECK(ptr_domain_cardinality != NULL, ILLEGAL_ARGUMENT);
 
 	input = BATdescriptor(*id_input);
+	cardinality = (BUN) (*ptr_domain_cardinality);
 
 	CHECK(input != NULL, RUNTIME_OBJECT_MISSING);
 	CHECK(input->T.nonil, ILLEGAL_ARGUMENT);
@@ -49,17 +49,20 @@ GRAPHprefixsum(bat* id_output, bat* id_input) {
 	printf("<<graph.prefixsum>>\n"); fflush(stdout);
 	bat_debug(input);
 
-	if(BATcount(input) == 0){ // edge case
+	if(cardinality == 0){ // edge case
 		CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, 0, TRANSIENT), MAL_MALLOC_FAIL);
 		goto success;
 	}
 
+	// initialise the result
+	CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, cardinality, TRANSIENT), MAL_MALLOC_FAIL);
+
 	if(input->T.type == TYPE_oid){
 		// Standard case, the BAT contains a sorted sequence of OIDs
-		capacity = *((oid*) Tloc(input, BUNlast(input)) -1); // BUNlast is the position after the last element!
-		CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, capacity, TRANSIENT), MAL_MALLOC_FAIL);
+		BUN p = 0; // position in the bat
+		BUN count = BATcount(input);
+		oid base = 0, next = 0, sum = 0;
 
-		count = BATcount(input);
 		do {
 			next = get(input, p);
 
@@ -75,14 +78,27 @@ GRAPHprefixsum(bat* id_output, bat* id_input) {
 		} while( p < count );
 
 	} else {
-		assert(input->T.type == TYPE_void);
 		// TYPE_void is an optimisation where the BAT holds a sequence of IDs [seqbase, seqbase+1, ..., seqbase+cnt -1]
-		// This can happen in the extreme case where each vertex has only an outgoing edge. We just materialise the BAT
+		// This can happen in the extreme case where all vertices have only one outgoing edge. We just materialise the BAT
 		// with the sequence of oids
-		capacity = BATcount(input);
-		CHECK(output = COLnew(input->hseqbase /*=0*/, TYPE_oid, capacity, TRANSIENT), MAL_MALLOC_FAIL);
-		for(oid i = input->hseqbase; i < capacity; i++){
+		BUN count = BATcount(input);
+
+		assert(input->T.type == TYPE_void);
+
+		for(oid i = 1; i <= count; i++){
 			BUNappend(output, &i, FALSE);
+		}
+	}
+
+	// fill the remaining vertices in the domain with no outgoing edges
+	assert(BATcount(output) <= cardinality);
+	if(BATcount(output) < cardinality){
+		// BUNlast is the position after the last element
+		oid value = BATcount(output) > 0 ? *((oid*) Tloc(output, BUNlast(output)) -1) : 0;
+		BUN count = cardinality - BATcount(output);
+
+		for(BUN i = 0; i < count; i++){
+			BUNappend(output, &value, FALSE);
 		}
 	}
 
@@ -155,7 +171,7 @@ GRAPHload(bat* ret_id_from, bat* ret_id_to, bat* ret_id_weights, str* path) {
 
 		tempc = strtoll(p, &ptr, 10); // edge weight
 		CHECK(tempc > 0 || (tempc == 0 && p != ptr), RUNTIME_LOAD_ERROR);
-		lng e_weight = tempc;
+		BUN e_weight = tempc;
 
 		CHECK(BUNappend(from, &e_from, 0) == GDK_SUCCEED, MAL_MALLOC_FAIL);
 		CHECK(BUNappend(to, &e_to, 0) == GDK_SUCCEED, MAL_MALLOC_FAIL);
@@ -275,7 +291,7 @@ GRAPHsave(void* dummy, str* path, bat* id_qfrom, bat* id_qto, bat* id_weights, b
 	// array accessors
 	oid* __restrict aqfrom;
 	oid* __restrict aqto;
-	lng* __restrict aqweights;
+	BUN* __restrict aqweights;
 	oid* __restrict apoid;
 	oid* __restrict appath;
 	BUN q_sz = 0, poid_sz = 0, poid_cur = 0;
@@ -308,7 +324,7 @@ GRAPHsave(void* dummy, str* path, bat* id_qfrom, bat* id_qto, bat* id_weights, b
 
 	aqfrom = (oid*) qfrom->theap.base;
 	aqto = (oid*) qto->theap.base;
-	aqweights = (lng*) weights->theap.base;
+	aqweights = (BUN*) weights->theap.base;
 	apoid = (oid*) poid->theap.base;
 	appath = (oid*) ppath->theap.base;
 	q_sz = BATcount(qfrom);

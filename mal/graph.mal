@@ -14,7 +14,7 @@ command save(path :str, qfrom :bat[:oid], qto :bat[:oid], weights :bat[:lng], po
 address GRAPHsave
 comment "Store the result of the operator to an output file, to be validated externally"; 
 
-command prefixsum(:bat[:oid]) :bat[:oid]
+command prefixsum(:bat[:oid], :lng) :bat[:oid]
 address GRAPHprefixsum
 comment "Perform the prefix sum of the values in the BAT";
 
@@ -31,7 +31,7 @@ function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat
   fw := algebra.projection(perm, weights);
   
   # perform the prefix sum
-  fs_ps := graph.prefixsum(fs);
+  fs_ps := graph.prefixsum(fs, from_sz);
   
   return (fs_ps, ft, fw);
 end make;

@@ -157,6 +157,7 @@ namespace monetdb {
 
 		iterator_make<W> operator[] (vertex_t vertex_id) const noexcept {
 			assert(vertex_id < size());
+
 			std::size_t offset = vertex_id == 0 ? 0 : vertices[vertex_id -1];
 			return iterator_make<W>(edges + offset, weights + offset, edges + vertices[vertex_id]);
 		}

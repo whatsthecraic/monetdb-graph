@@ -32,7 +32,7 @@ namespace fifo_internal {
 }
 
 
-template<typename vertex_t, typename distance_t>
+template<typename vertex_t, typename distance_t = void>
 class FIFO{
 public:
     using value = typename fifo_internal::value<vertex_t, distance_t>::value_t;

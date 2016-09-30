@@ -31,7 +31,7 @@ namespace radixheap_internal {
 	}
 #else // other compilers
 	template<typename T>
-	typename int MSD(T a, T b){
+	int MSD(T a, T b){
 		if(a == b) return 0; // edge case
 		// text book implementation
 		return floor(log2(a ^ b)) +1;

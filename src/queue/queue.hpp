@@ -21,7 +21,7 @@ struct QueueDijkstra {
 // circular buffer
 template<typename vertex_t>
 struct QueueDijkstra<vertex_t, void>{
-    using type = FIFO<vertex_t, std::size_t>;
+    using type = FIFO<vertex_t>;
 };
 
 } // namespace monetdb

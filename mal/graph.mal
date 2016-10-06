@@ -22,6 +22,10 @@ command void2oid(:bat[:oid]) :bat[:oid]
 address GRAPHvoid2oid
 comment "Iff the input is of type void, it morphs it in type oid. Otherwise it just returns the same input";
 
+pattern slicer( :bat[:any_1] ) :any...
+address GRAPHslicer
+comment "Split the input BAT into multiple bats of roughly equal size";
+
 function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat[:oid], :bat[:lng]);
   # check inputs have the same input size
   from_sz := aggr.count(from);

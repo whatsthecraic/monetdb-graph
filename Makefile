@@ -25,7 +25,7 @@ CXXFLAGS := -std=c++11 ${common_flags}
 LDFLAGS := -L${libdir} -lmonetdb5
 
 # List of the sources to compile
-sources := preprocess.c debug.cpp spfw.cpp
+sources := debug.cpp miscellaneous.c preprocess.c spfw.cpp
 
 # Name of the produces library
 library := libgraph_monetdb.so

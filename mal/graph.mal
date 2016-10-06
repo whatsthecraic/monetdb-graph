@@ -18,6 +18,10 @@ command prefixsum(:bat[:oid], :lng) :bat[:oid]
 address GRAPHprefixsum
 comment "Perform the prefix sum of the values in the BAT";
 
+command void2oid(:bat[:oid]) :bat[:oid]
+address GRAPHvoid2oid
+comment "Iff the input is of type void, it morphs it in type oid. Otherwise it just returns the same input";
+
 function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat[:oid], :bat[:lng]);
   # check inputs have the same input size
   from_sz := aggr.count(from);
@@ -36,7 +40,7 @@ function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat
   return (fs_ps, ft, fw);
 end make;
 
-command spfw(qfperm:bat[:oid], qtperm:bat[:oid], qfval:bat[:oid], qtval:bat[:oid], V:bat[:oid], E:bat[:oid]) (:bat[:oid])
+command spfw(qfperm:bat[:oid], qtperm:bat[:oid], qfval:bat[:oid], qtval:bat[:oid], V:bat[:oid], E:bat[:oid]) (:bat[:oid], :bat[:oid])
 address GRAPHconnected
 comment "Filter out the tuples that are connected in the graph, regardless of their distance";
 

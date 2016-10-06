@@ -42,7 +42,7 @@ GRAPHprefixsum(bat* id_output, bat* id_input, lng* ptr_domain_cardinality) {
 	CHECK(input != NULL, RUNTIME_OBJECT_MISSING);
 	CHECK(input->T.nonil, ILLEGAL_ARGUMENT);
 	CHECK(input->hseqbase == 0, ILLEGAL_ARGUMENT);
-	CHECK(input->T.type == TYPE_oid || input->T.type == TYPE_void, ILLEGAL_ARGUMENT);
+	CHECK(ATOMtype(BATttype(input)) == TYPE_oid, ILLEGAL_ARGUMENT);
 	CHECK(BATtordered(input), ILLEGAL_ARGUMENT ": the input column is not sorted");
 
 	// DEBUG ONLY
@@ -50,12 +50,12 @@ GRAPHprefixsum(bat* id_output, bat* id_input, lng* ptr_domain_cardinality) {
 	bat_debug(input);
 
 	if(cardinality == 0){ // edge case
-		CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, 0, TRANSIENT), MAL_MALLOC_FAIL);
+		CHECK(output = COLnew(input->hseqbase /*=0*/, TYPE_oid, 0, TRANSIENT), MAL_MALLOC_FAIL);
 		goto success;
 	}
 
 	// initialise the result
-	CHECK(output = COLnew(input->hseqbase /*=0*/, input->T.type, cardinality, TRANSIENT), MAL_MALLOC_FAIL);
+	CHECK(output = COLnew(input->hseqbase /*=0*/, TYPE_oid, cardinality, TRANSIENT), MAL_MALLOC_FAIL);
 
 	if(input->T.type == TYPE_oid){
 		// Standard case, the BAT contains a sorted sequence of OIDs
@@ -108,6 +108,45 @@ success:
 	BBPunfix(input->batCacheid);
 	*id_output = output->batCacheid;
 	BBPkeepref(output->batCacheid);
+
+	return rc;
+error:
+	if(output) { BBPunfix(output->batCacheid); }
+	if(input) { BBPunfix(input->batCacheid); }
+
+	return rc;
+}
+
+// transform a column from type VOID to type OID
+mal_export str
+GRAPHvoid2oid(bat* id_output, bat* id_input){
+	const char* function_name = "graph.void2oid";
+	str rc = MAL_SUCCEED;
+	BAT *input = NULL, *output = NULL;
+	*id_output = bat_nil;
+
+	input = BATdescriptor(*id_input);
+	CHECK(input != NULL, RUNTIME_OBJECT_MISSING);
+	CHECK(ATOMtype(BATttype(input)) == TYPE_oid, ILLEGAL_ARGUMENT);
+
+	// nothing to do, the input is already of type oid
+	if(input->T.type == TYPE_oid){
+		BBPkeepref(input->batCacheid);
+		*id_output = *id_input;
+	}
+	// otherwise generate a new bat of type oid and copy all values
+	else {
+		size_t output_sz = (size_t) BATcount(input);
+		CHECK(output = COLnew(input->hseqbase /*=0*/, TYPE_oid, output_sz, TRANSIENT), MAL_MALLOC_FAIL);
+		for(size_t i = 0; i < output_sz; i++){
+			((oid*) output->T.heap.base)[i] = i;
+		}
+		BATsetcount(output, output_sz);
+
+		BBPunfix(input->batCacheid);
+		BBPkeepref(output->batCacheid);
+		*id_output = output->batCacheid;
+	}
 
 	return rc;
 error:

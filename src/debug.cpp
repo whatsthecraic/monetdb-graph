@@ -51,7 +51,7 @@ void bat_debug0(const char* prefix, BAT* b){
     if(b == nullptr){
         std::cout << "NULL\n";
     } else {
-        switch(BATttype(b)){
+        switch(b->ttype){
         case TYPE_void:
             bat_debug_T<void>(b);
             break;
@@ -59,7 +59,7 @@ void bat_debug0(const char* prefix, BAT* b){
             bat_debug_T<oid>(b);
             break;
         default:
-            cout << "Type not handled (" << BATttype(b) << ")\n";
+            cout << "Type not handled (" << b->ttype << ")\n";
         }
     }
 

@@ -141,6 +141,11 @@ static void trampoline(
 
 #define BATfree( b ) if(b) { BBPunfix(b->batCacheid); }
 
+//// True iff the given BAT is of type `type' or is empty, false otherwise.
+//static bool BATempty_or_T(BAT* b, bte type){
+//	return BATttype(b) == type || BATcount(b) == 0;
+//}
+
 static str
 handle_request(
 	   bat* id_out_filter_src,  bat* id_out_filter_dst,
@@ -204,6 +209,7 @@ handle_request(
         out_query_weights = COLnew(0, in_weights->ttype, output_max_size, TRANSIENT);
         CHECK(out_query_weights != nullptr, MAL_MALLOC_FAIL);
 	}
+
 	// TODO Disabled for the time being
 //	out_query_oid_path = COLnew(in_query_from->hseqbase, TYPE_oid, 0, TRANSIENT);
 //	CHECK(out_query_oid_path != nullptr, MAL_MALLOC_FAIL);
@@ -219,6 +225,9 @@ handle_request(
 	bat_debug(in_vertices);
 	bat_debug(in_edges);
 
+	// if the graph is empty, there is not much to do
+	if(BATcount(in_vertices) == 0 || BATcount(in_edges) == 0) goto success;
+
 	try {
 	    if(!graph_has_weights){
 //            trampoline<void>(out_query_filter, out_query_weights, out_query_oid_path, out_query_path,
@@ -232,6 +241,7 @@ handle_request(
 		CHECK(0, OPERATION_FAILED); // generic error
 	}
 
+success:
 	// report the joined columns
 	BBPkeepref(out_query_filter_src->batCacheid);
 	*id_out_filter_src = out_query_filter_src->batCacheid;

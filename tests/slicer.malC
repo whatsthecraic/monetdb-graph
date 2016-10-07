@@ -1,0 +1,18 @@
+
+b := bat.new(:oid);
+b := bat.append(b, 5:oid);
+b := bat.append(b, 6:oid);
+b := bat.append(b, 7:oid);
+
+b1 :bat[:oid];
+b2 :bat[:oid];
+b3 :bat[:oid];
+b4 :bat[:oid];
+io.print(b);;
+(b1, b2, b3, b4) := graph.slicer(b);
+io.print(b1);
+io.print(b2);
+io.print(b3);
+io.print(b4);
+
+;

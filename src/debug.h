@@ -22,7 +22,6 @@ void bat_debug0(const char* prefix, BAT* b);
 #define bat_debug(b) bat_debug0("["#b"]",  b);
 
 
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

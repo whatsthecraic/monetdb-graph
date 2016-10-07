@@ -10,6 +10,12 @@
 // MonetDB includes
 #include <gdk.h>
 
+// Defined in <mal_interpreter.h>
+ptr getArgReference(MalStkPtr stk, InstrPtr pci, int k);
+
+// Graph library includes
+#include "debug.h"
+
 /*
  * Split the given input BAT into multiple bats of equal sizes. The number of BATs that should be created
  * is defined by the number of variables expected in the output
@@ -30,16 +36,22 @@ GRAPHslicer(void* cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr p){
 	CHECK(p->argc - p->retc == 1, ILLEGAL_ARGUMENT ": Expected exactly one input parameter");
 
 	// retrieve the input
-	input = BATdescriptor(getArg(p, p->retc));
+	input = BATdescriptor(*((bat*)getArgReference(stk, p, p->retc)));
 	CHECK(input != NULL, RUNTIME_OBJECT_MISSING);
-	input_type = input->T.type;
+	input_type = ATOMtype(input->T.type);
 
 	// check the types for the output bats is the same as the input
 	for(BUN i = 0; i < p->retc; i++){
 		int type = getArgType(mb, p, i);
+		int bat_type = -1;
 
 		CHECK(isaBatType(type), ILLEGAL_ARGUMENT);
-		CHECK(getBatType(type) == input_type || (type == TYPE_oid && input_type == TYPE_void), ILLEGAL_ARGUMENT);
+		bat_type = getBatType(type);
+		if(bat_type == TYPE_any) {
+			setArgType(mb, p, i, newBatType(input_type)); // FIXME not sure it has any effect at this point
+		} else {
+			CHECK(bat_type == input_type || (bat_type == TYPE_oid && input_type == TYPE_void), ILLEGAL_ARGUMENT);
+		}
 	}
 
 	// compute the size of the partitions
@@ -55,17 +67,18 @@ GRAPHslicer(void* cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr p){
 		BUN low = pstart;
 		BUN high = low + step_sz;
 		BAT* slice = container[i] = BATslice(input, low, high);
+//		bat_debug(slice);
 		CHECK(slice != NULL, MAL_MALLOC_FAIL);
+		slice->hseqbase = 0; // reset the partition no.
 
-		if(slice->T.type != TYPE_void){
-			slice->hseqbase = 0;
-
-		} else { // the output has type TYPE_void, materialize as TYPE_oid
+		if(slice->T.type == TYPE_void){
+			 // the output has type TYPE_void, materialize as TYPE_oid
+			oid value = slice->T.seq;
 			const size_t matslice_sz = BATcount(slice);
 			BAT* matslice = COLnew(0, TYPE_oid, matslice_sz, TRANSIENT);
-			oid value = slice->hseqbase;
 
 			CHECK(matslice != NULL, MAL_MALLOC_FAIL);
+
 			for(size_t j = 0; j < matslice_sz; j++){
 				((oid*) matslice->T.heap.base)[j] = value;
 				value++;
@@ -79,11 +92,11 @@ GRAPHslicer(void* cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr p){
 		pstart = high; // next iteration
 	}
 
-
 	BATfree(input);
 
 	// Return the slices
 	for(BUN i = 0; i < num_partitions; i++){
+//		bat_debug(container[i]);
 		BBPkeepref(container[i]->batCacheid);
 		stk->stk[p->argv[i]].val.bval = container[i]->batCacheid;
 	}

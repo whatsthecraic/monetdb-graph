@@ -38,7 +38,7 @@ static void bat_debug_T(BAT* b){
 template<>
 void bat_debug_T<void>(BAT* b){
     using std::cout;
-    cout << "hseqbase: " << b->hseqbase << ", count: " << BATcount(b) << ", TYPE_void\n";
+    cout << "hseqbase: " << b->hseqbase << ", count: " << BATcount(b) << ", TYPE_void, start of the sequence: " << b->T.seq << "\n";
 }
 
 

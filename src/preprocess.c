@@ -78,15 +78,18 @@ GRAPHprefixsum(bat* id_output, bat* id_input, lng* ptr_domain_cardinality) {
 		} while( p < count );
 
 	} else {
+		// FIXME: this branch should be unreachable now
 		// TYPE_void is an optimisation where the BAT holds a sequence of IDs [seqbase, seqbase+1, ..., seqbase+cnt -1]
 		// This can happen in the extreme case where all vertices have only one outgoing edge. We just materialise the BAT
 		// with the sequence of oids
 		BUN count = BATcount(input);
+		oid value = input->T.seq;
 
 		assert(input->T.type == TYPE_void);
 
-		for(oid i = 1; i <= count; i++){
-			BUNappend(output, &i, FALSE);
+		for(BUN i = 0; i < count; i++){
+			BUNappend(output, &value, FALSE);
+			value++;
 		}
 	}
 

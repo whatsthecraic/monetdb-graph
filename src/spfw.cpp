@@ -151,7 +151,8 @@ handle_request(
 	   bat* id_out_filter_src,  bat* id_out_filter_dst,
 	   bat* id_out_query_weight, bat* id_out_query_oid_path, bat* id_out_query_path,
 	   bat* id_in_query_from_perm, bat* id_in_query_to_perm, bat* id_in_query_from_values, bat* id_in_query_to_values,
-	   bat* id_in_vertices, bat* id_in_edges, bat* id_in_weights
+	   bat* id_in_vertices, bat* id_in_edges, bat* id_in_weights,
+	   bit* cross_product
 	   ) noexcept {
 	str rc = MAL_SUCCEED;
 	const char* function_name = "graph.spfw";
@@ -217,13 +218,14 @@ handle_request(
 //	CHECK(out_query_path != nullptr, MAL_MALLOC_FAIL);
 
 	// DEBUG ONLY
-	printf("<<graph.spfw>>\n"); fflush(stdout);
-	bat_debug(in_query_from_perm);
-	bat_debug(in_query_to_perm);
-	bat_debug(in_query_from_values);
-	bat_debug(in_query_to_values);
-	bat_debug(in_vertices);
-	bat_debug(in_edges);
+	DEBUG_DUMP("<<graph.spfw>>\n");
+	DEBUG_DUMP(in_query_from_perm);
+	DEBUG_DUMP(in_query_to_perm);
+	DEBUG_DUMP(in_query_from_values);
+	DEBUG_DUMP(in_query_to_values);
+	DEBUG_DUMP(in_vertices);
+	DEBUG_DUMP(in_edges);
+	DEBUG_DUMP((bool) *cross_product);
 
 	// if the graph is empty, there is not much to do
 	if(BATcount(in_vertices) == 0 || BATcount(in_edges) == 0) goto success;
@@ -297,7 +299,8 @@ extern "C" {
 str GRAPHconnected(
 	bat* id_out_left, bat* id_out_right,
 	bat* id_in_query_from_p, bat* id_in_query_to_p, bat* id_in_query_from_v, bat* id_in_query_to_v,
-	bat* id_in_vertices, bat* id_in_edges
+	bat* id_in_vertices, bat* id_in_edges,
+	bit* cross_product
 ) noexcept {
 	return handle_request(
 			// Output parameters
@@ -313,7 +316,8 @@ str GRAPHconnected(
 			/* id_in_query_to_values = */ id_in_query_to_v,
 			/* id_in_vertices = */ id_in_vertices,
 			/* id_in_edges = */ id_in_edges,
-			/* id_in_weights = */ nullptr
+			/* id_in_weights = */ nullptr,
+			/* cross_product = */ cross_product
 	);
 }
 

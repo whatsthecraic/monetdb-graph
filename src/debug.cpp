@@ -16,7 +16,6 @@ extern "C" {
 
 using namespace std;
 
-
 /******************************************************************************
  *                                                                            *
  *  Print the content of a BAT to stdout                                      *
@@ -24,7 +23,7 @@ using namespace std;
  ******************************************************************************/
 
 template<typename T>
-static void bat_debug_T(BAT* b){
+static void _bat_debug_T(BAT* b){
     using std::cout;
 
     T* A = reinterpret_cast<T*>(b->theap.base);
@@ -36,7 +35,7 @@ static void bat_debug_T(BAT* b){
 }
 
 template<>
-void bat_debug_T<void>(BAT* b){
+void _bat_debug_T<void>(BAT* b){
     using std::cout;
     cout << "hseqbase: " << b->hseqbase << ", count: " << BATcount(b) << ", TYPE_void, start of the sequence: " << b->T.seq << "\n";
 }
@@ -44,7 +43,7 @@ void bat_debug_T<void>(BAT* b){
 
 extern "C" { // disable name mangling
 
-void bat_debug0(const char* prefix, BAT* b){
+void _bat_debug0(const char* prefix, BAT* b){
     using std::cout;
 
     cout << prefix << " ";
@@ -53,10 +52,10 @@ void bat_debug0(const char* prefix, BAT* b){
     } else {
         switch(b->ttype){
         case TYPE_void:
-            bat_debug_T<void>(b);
+            _bat_debug_T<void>(b);
             break;
         case TYPE_oid:
-            bat_debug_T<oid>(b);
+            _bat_debug_T<oid>(b);
             break;
         default:
             cout << "Type not handled (" << b->ttype << ")\n";

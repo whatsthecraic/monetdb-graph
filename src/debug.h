@@ -18,12 +18,38 @@ extern "C" {
 #endif
 
 // Print the whole content of a BAT to stdout (similar to io.print);
-void bat_debug0(const char* prefix, BAT* b);
-#define bat_debug(b) bat_debug0("["#b"]",  b);
-
+void _bat_debug0(const char* prefix, BAT* b);
+#define bat_debug(b) _bat_debug0("["#b"]",  b);
 
 #ifdef __cplusplus
 } /* extern "C" */
+#endif
+
+
+/**
+ * In C++ use the single macro DEBUG_DUMP(x) to dump the content of any variable
+ */
+#ifdef __cplusplus
+#include <iostream>
+template <typename T>
+void _debug_dump0(const char* prefix, T value){
+	std::cout << prefix << ": " << value << std::endl;
+}
+template <>
+void _debug_dump0<BAT*>(const char* prefix, BAT* value){
+	_bat_debug0(prefix, value);
+}
+template <>
+void _debug_dump0<bool>(const char* prefix, bool value){
+	std::cout << prefix << ": " << std::boolalpha << value << std::endl;
+}
+
+template <>
+void _debug_dump0<char*>(const char* prefix, char* value){
+	std::cout << value << std::endl;
+}
+
+#define DEBUG_DUMP(value) _debug_dump0("["#value"]",  value);
 #endif
 
 #endif /* DEBUG_H_ */

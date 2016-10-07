@@ -58,7 +58,7 @@ function make(from:bat[:oid], to:bat[:oid], weights:bat[:lng]) (:bat[:oid], :bat
   return (fs_ps, ft, fw);
 end make;
 
-command spfw(qfperm:bat[:oid], qtperm:bat[:oid], qfval:bat[:oid], qtval:bat[:oid], V:bat[:oid], E:bat[:oid]) (:bat[:oid], :bat[:oid])
+command spfw(qfperm:bat[:oid], qtperm:bat[:oid], qfval:bat[:oid], qtval:bat[:oid], V:bat[:oid], E:bat[:oid], crossproduct:bit) (:bat[:oid], :bat[:oid])
 address GRAPHconnected
 comment "Filter out the tuples that are connected in the graph, regardless of their distance";
 

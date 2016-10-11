@@ -43,7 +43,7 @@ namespace radixheap_internal {
 template<typename vertex_t, typename distance_t>
 class RadixHeap {
 public:
-	struct pair { vertex_t v; distance_t d; };
+	struct pair { vertex_t dst; distance_t cost; };
 private:
 	const static std::size_t bsize = std::numeric_limits<distance_t>::digits + 1;
 	const static std::size_t capmin = 1024; // arbitrary value
@@ -62,7 +62,7 @@ private:
 	}
 
 	// append the given item into the bucket
-	void append(int i, vertex_t v, distance_t d){
+	void append(int i, pair p){
 		if(size[i] >= capacity[i]){ // realloc
 			capacity[i] *= 2;
 			pair* temp = new pair[capacity[i]];
@@ -70,15 +70,15 @@ private:
 			delete[] buckets[i];
 			buckets[i] = temp;
 		}
-		buckets[i][size[i]++] = pair{v, d};
+		buckets[i][size[i]++] = p;
 	}
 
 
-	void push0(vertex_t v, distance_t d){
-		assert(d >= lastmin && "Key must be non decreasing");
-		int bucketno = get_bucket_index(d);
-		append(bucketno, v, d);
-		if(d < bmin[bucketno]) bmin[bucketno] = d;
+	void push0(pair p){
+		assert(p.cost >= lastmin && "Key must be non decreasing");
+		int bucketno = get_bucket_index(p.cost);
+		append(bucketno, p);
+		if(p.cost < bmin[bucketno]) bmin[bucketno] = p.cost;
 	}
 
 
@@ -94,8 +94,8 @@ private:
 		lastmin = bmin[imin];
 		pair* __restrict bucket = buckets[imin];
 		for(std::size_t j = 0, sz = size[imin]; j < sz; j++){
-			assert(get_bucket_index(bucket[j].d) < imin);
-			push0(bucket[j].v, bucket[j].d);
+			assert(get_bucket_index(bucket[j].cost) < imin);
+			push0(bucket[j]);
 		}
 
 		// update the control variables
@@ -127,8 +127,8 @@ public:
 		}
 	}
 
-	void push(vertex_t v, distance_t d){
-		push0(v, d);
+	void push(pair p){
+		push0(p);
 		hsize++;
 	}
 
@@ -164,6 +164,6 @@ public:
 
 };
 
-}
+} // namespace monetdb
 
 #endif /* RADIXHEAP_HPP_ */

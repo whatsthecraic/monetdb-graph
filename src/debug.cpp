@@ -28,7 +28,10 @@ static void _bat_debug_T(BAT* b){
 
     T* A = reinterpret_cast<T*>(b->theap.base);
     size_t A_sz = (size_t) BATcount(b);
-    cout << "hseqbase: " << b->hseqbase << ", count: " << A_sz << "\n";
+    // BATatoms is defined in monetdb/gdk/gdk_atoms.c
+    atomDesc* type = BATatoms + (b->ttype);
+
+    cout << "hseqbase: " << b->hseqbase << ", count: " << A_sz << ", type: " << type->name << " (" << (int) b->ttype << ")\n";
     for(size_t i = 0; i < A_sz; i++){
         cout << "[" << i << "] " << A[i] << '\n';
     }
@@ -54,6 +57,12 @@ void _bat_debug0(const char* prefix, BAT* b){
         case TYPE_void:
             _bat_debug_T<void>(b);
             break;
+        case TYPE_int:
+        	_bat_debug_T<int>(b);
+        	break;
+        case TYPE_lng:
+        	_bat_debug_T<lng>(b);
+			break;
         case TYPE_oid:
             _bat_debug_T<oid>(b);
             break;

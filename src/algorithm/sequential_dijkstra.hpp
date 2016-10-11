@@ -11,7 +11,7 @@
 
 #include <cstddef>
 #include <limits>
-#include <iostream>
+#include <iostream> // debug only
 #include <type_traits>
 #include <vector>
 
@@ -128,13 +128,16 @@ private:
 		}
 	}
 
-	void finish(query_t& q, std::size_t i){
-		auto dst = q.dest(i);
+	/**
+	 * @return true if i src[i] is connected to dst[j], false otherwise
+	 */
+	bool finish(query_t& q, std::size_t i, std::size_t j){
+		auto dst = q.dest(j);
 
 		// did we reach the destination?
-		if(distances[dst] == INFINITY) return; // no, we didn't
+		if(distances[dst] == INFINITY) return false; // no, we didn't
 
-		q.join(i, distances[dst]);
+		q.join(i, j, distances[dst]);
 
 		// TODO leave the computation of the final path for now
 //        // report the output path
@@ -151,42 +154,50 @@ private:
 //
 //        if(distance)
 //            *distance = distances[dst]; // output weight
+
+		return true;
 	}
 
 
 	// Single source single destination
-	void sssd(query_t& q, std::size_t i){
+	void sssd(query_t& q, std::size_t i, std::size_t j){
 		init(q.source(i));
-		execute(q.dest(i));
-		finish(q, i);
+		execute(q.dest(j));
+		finish(q, i, j);
 	}
 
 	// Single source, multi destination
-	void ssmd(query_t& q, std::size_t first, std::size_t last){
-		init(q.source(last));
-		for(std::size_t i = first; i <= last; i++){
-			if(distances[q.dest(i)] == INFINITY){
-				execute(q.dest(i));
+	std::size_t ssmd(query_t& q, std::size_t i_src, std::size_t j_dst_first, std::size_t j_dst_last){
+		std::size_t count = 0; // keep track of how many tuples have been reached
+
+		init(q.source(i_src));
+		for(std::size_t j = j_dst_first; j <= j_dst_last; j++){
+			if(distances[q.dest(j)] == INFINITY){
+				execute(q.dest(j));
 			}
 
-			finish(q, i);
+			bool connected = finish(q, i_src, j);
+		    if(connected) count++;
 		}
+
+		return count;
 	}
 
-	// Multi source, multi destination
-	void msmd(query_t& q, std::size_t first, std::size_t last){
-		std::size_t size = last +1 - first;
+	// Try to re-use the same distance array among consecutive sources
+	void filter(query_t& q){
+		assert(q.size_left() == q.size_right());
+		const std::size_t size = q.size_left();
 
 		auto flush = [this, &q](std::size_t i, std::size_t n){
 			if(n == 1){
-				sssd(q, i);
+				sssd(q, i, i);
 			} else {
-				ssmd(q, i, i+n -1);
+				ssmd(q, i, i, i+n -1);
 			}
 		};
 
 		std::size_t contiguous_sources = 1;
-		for(std::size_t i = first +1; i <= last; i++){
+		for(std::size_t i = 1; i <= size; i++){
 			if(q.source(i) == q.source(i-1)) {
 				contiguous_sources++;
 			} else {
@@ -196,6 +207,24 @@ private:
 		}
 
 		flush(size - contiguous_sources, contiguous_sources);
+	}
+
+	void join(query_t& q){
+		std::size_t size_last_batch = 0;
+
+		// perform the cross product
+		for(std::size_t i = 0; i < q.size_left(); i++){
+			// This is a small optimisation: if we have two consecutive sources, do not repeat the
+			// computation of Dijkstra, just duplicate the result of the previous batch
+			bool compute_dijkstra = (i == 0) || (q.source(i-1) != q.source(i));
+			// compute the shortest path
+
+			if(compute_dijkstra){
+				size_last_batch = ssmd(q, i, 0, q.size_right() -1);
+			} else {
+				q.duplicate_tail(size_last_batch);
+			}
+		}
 	}
 
 
@@ -210,8 +239,14 @@ public:
 	}
 
 	void operator()(query_t& q){
-		if(q.size() > 0)
-			msmd(q, 0, q.size() -1);
+		if(q.empty()) return; // edge case
+
+		// Here it seems we have two different use cases
+		if(q.is_filter_only()){
+			filter(q);
+		} else {
+			join(q);
+		}
 	}
 
 };

@@ -13,17 +13,24 @@
 
 namespace monetdb {
 
-template<typename vertex_t, typename distance_t>
+// Primary template
+template<typename vertex_t, typename distance_t, typename _enable = void>
 struct QueueDijkstra {
     // empty
 };
 
-// circular buffer
+// Circular buffer
 template<typename vertex_t>
 struct QueueDijkstra<vertex_t, void>{
     using type = FIFO<vertex_t>;
 };
 
-} // namespace monetdb
+// Radix heap
+template<typename vertex_t, typename distance_t>
+struct QueueDijkstra<vertex_t, distance_t, typename std::enable_if<std::is_unsigned<distance_t>::value>::type >{
+	using type = RadixHeap<vertex_t, distance_t>;
+};
 
+
+} // namespace monetdb
 #endif /* QUEUE_HPP_ */

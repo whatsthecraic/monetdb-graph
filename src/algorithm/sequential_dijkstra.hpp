@@ -21,26 +21,11 @@
 
 namespace monetdb {
 
-namespace sequential_dijkstra_internal {
-
-template<typename vertex_t, typename distance_t>
-struct cost {
-	using type = distance_t;
-};
-
-template<typename vertex_t>
-struct cost<vertex_t, void> {
-	using type = typename Graph<vertex_t>::cost_t;
-};
-
-} // namespace sequential_dijkstra_internal
-
-
 template <typename V, typename W>
 class SequentialDijkstra {
 public:
 	using vertex_t = V;
-	using cost_t = typename sequential_dijkstra_internal::cost<V, W>::type;
+	using cost_t = typename Graph<V, W>::cost_t;
 	using query_t = Query<vertex_t, cost_t>;
 private:
 	using queue_t = typename QueueDijkstra<V, W>::type;
@@ -197,7 +182,7 @@ private:
 		};
 
 		std::size_t contiguous_sources = 1;
-		for(std::size_t i = 1; i <= size; i++){
+		for(std::size_t i = 1; i < size; i++){
 			if(q.source(i) == q.source(i-1)) {
 				contiguous_sources++;
 			} else {
@@ -217,9 +202,9 @@ private:
 			// This is a small optimisation: if we have two consecutive sources, do not repeat the
 			// computation of Dijkstra, just duplicate the result of the previous batch
 			bool compute_dijkstra = (i == 0) || (q.source(i-1) != q.source(i));
-			// compute the shortest path
 
 			if(compute_dijkstra){
+				// compute the shortest path
 				size_last_batch = ssmd(q, i, 0, q.size_right() -1);
 			} else {
 				q.duplicate_tail(size_last_batch);

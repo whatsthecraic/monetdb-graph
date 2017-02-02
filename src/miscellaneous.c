@@ -76,11 +76,13 @@ GRAPHslicer(void* cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr p){
 			oid value = slice->T.seq;
 			const size_t matslice_sz = BATcount(slice);
 			BAT* matslice = COLnew(0, TYPE_oid, matslice_sz, TRANSIENT);
+			oid* valarray = NULL;
 
 			CHECK(matslice != NULL, MAL_MALLOC_FAIL);
+			valarray = (oid*) matslice->T.heap.base;
 
 			for(size_t j = 0; j < matslice_sz; j++){
-				((oid*) matslice->T.heap.base)[j] = value;
+				valarray[j] = value;
 				value++;
 			}
 			BATsetcount(matslice, matslice_sz);

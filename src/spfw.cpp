@@ -339,7 +339,6 @@ error:
  ******************************************************************************/
 extern "C" {
 
-// Only check which qfrom are connected to qto
 // spfw(qfperm:bat[:oid], qtperm:bat[:oid], qfval:bat[:oid], qtval:bat[:oid], V:bat[:oid], E:bat[:oid], W:bat[:any], crossproduct:bit, shortestpath:bit) (:bat[:oid], :bat[:oid], :bat[:any])
 str GRAPHspfw1(
 	bat* id_out_left, bat* id_out_right, bat* id_out_cost,

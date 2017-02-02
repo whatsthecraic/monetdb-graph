@@ -14,6 +14,10 @@ namespace monetdb{
 
 template<typename vertex_t, typename cost_t>
 class Query{
+	// disable copy ctors
+	Query(const Query& q) = delete;
+	Query& operator= (const Query& q) = delete;
+
 	// input parameters
 	const vertex_t* query_perm_left; // projection ids for the source tuples
 	const vertex_t* query_perm_right; // projection ids for the destionation tuples

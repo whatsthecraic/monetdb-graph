@@ -1,19 +1,21 @@
 #
 # Custom makefile to build the library for the monetdb operator
 # Note this only builds the library, you will still need to link monetdb, e.g. :
-# ln -s build/libgraph_monetdb.so <monetdb_build>/lib/monetdb5/lib_graph.so
+# ln -s build/libgraph.so <monetdb_build>/lib/monetdb5/lib_graph.so
 # ln -s mal/graph.mal <monetdb_build>/lib/monetdb5
 # ln -s mal/autoload.mal <monetdb_build>/lib/monetdb5/autoload/50_graph.mal
 #
 
 # build path for monetdb
-hostname := $(shell cat /etc/hostname)
-ifeq ($(hostname), sebastian) # home
-monetdbpath := ${HOME}/workspace/monetdb/build/
-else ifeq ($(hostname), athens.da.cwi.nl) # cwi workstation
-monetdbpath := /ufs/dleo/workspace/monetdb/build/
-else
-$(error Invalid host `$(hostname)')
+# try to search for the binary
+monetdbpath := $(shell if which mserver5 2>/dev/null 1>&2; then dirname $$(dirname $$(which mserver5)); fi)
+# otherwise try the default path
+ifeq (${monetdbpath},)
+monetdbpath := ${HOME}/workspace/monetdb/build/debug/
+monetdbpath := $(shell if [ -d "$(monetdbpath)" ]; then echo "$(monetdbpath)"; fi)
+endif
+ifeq (${monetdbpath},)
+$(error Cannot find the build path of MonetDB)
 endif
 
 # Compiler & linker settings
@@ -28,7 +30,7 @@ LDFLAGS := -L${libdir} -lmonetdb5
 sources := debug.cpp miscellaneous.c preprocess.c spfw.cpp
 
 # Name of the produces library
-library := libgraph_monetdb.so
+library := libgraph.so
 
 # Build directory
 builddir := build

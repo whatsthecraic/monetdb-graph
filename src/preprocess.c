@@ -1,6 +1,7 @@
 #include "monetdb_config.h" // this should be at the top
 
 #include <inttypes.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -155,6 +156,168 @@ GRAPHvoid2oid(bat* id_output, bat* id_input){
 error:
 	if(output) { BBPunfix(output->batCacheid); }
 	if(input) { BBPunfix(input->batCacheid); }
+
+	return rc;
+}
+
+
+
+// helper method for GRAPHinterjoinlist
+// initialize the bats for candidates, edge_src and edge_dst and copies the fields
+// that are already equal
+static str /* PRIVATE FUNCTION */
+GRAPHinterjoinlist_init_changes(BAT** out_candidates, BAT** out_edge_src, BAT** out_edge_dst,
+		size_t bat_capacity, size_t end_index,
+		oid* __restrict in_candidates, oid* __restrict in_edge_src, oid* __restrict in_edge_dst
+){
+	const char* function_name = "graph.intersect_join_lists";
+	str rc = MAL_SUCCEED;
+	BAT* candidates = *out_candidates = COLnew(0, TYPE_oid, bat_capacity, TRANSIENT);
+	BAT* edge_src = *out_edge_src = COLnew(0, TYPE_oid, bat_capacity, TRANSIENT);
+	BAT* edge_dst = *out_edge_dst = COLnew(0, TYPE_oid, bat_capacity, TRANSIENT);
+
+	CHECK(candidates != NULL, MAL_MALLOC_FAIL);
+	CHECK(edge_src != NULL, MAL_MALLOC_FAIL);
+	CHECK(edge_dst != NULL, MAL_MALLOC_FAIL);
+
+	for(size_t i = 0; i < end_index; i++){
+		BUNappend(edge_src, in_edge_src + i, false);
+		BUNappend(edge_dst, in_edge_dst + i, false);
+		BUNappend(candidates, in_candidates + i, false);
+	}
+
+error: // nop, in case of error the bats are going to be release by the invoker
+	return rc;
+}
+
+/**
+ * Remove tuples with values marked as NULL
+ */
+mal_export str
+GRAPHinterjoinlist(bat* out_candidates, bat* out_edge_src, bat* out_edge_dst,
+		bat* in_a, bat* in_b, bat* in_c, bat* in_d){
+	const char* function_name = "graph.intersect_join_lists";
+	str rc = MAL_SUCCEED;
+	BAT *a = NULL, *b = NULL, *c = NULL, *d = NULL; // input
+	BAT *candidates = NULL, *edge_src = NULL, *edge_dst = NULL; // output
+	bool changes = false; // did we remove or alter any element
+	oid* __restrict left = NULL; // left candidate list (array pointer)
+	oid* __restrict right = NULL; // right candidate list (array pointer)
+	oid* __restrict left_src = NULL; // src edges
+	oid* __restrict right_dst = NULL; // dst edges
+	size_t i = 0, j = 0, left_sz = 0, right_sz = 0, min_sz = 0;
+
+	// acquire the input bats
+	a = BATdescriptor(*in_a);
+	CHECK(a != NULL, RUNTIME_OBJECT_MISSING);
+	CHECK(ATOMtype(BATttype(a)) == TYPE_oid, ILLEGAL_ARGUMENT);
+	b = BATdescriptor(*in_b);
+	CHECK(b != NULL, RUNTIME_OBJECT_MISSING);
+	CHECK(ATOMtype(BATttype(b)) == TYPE_oid, ILLEGAL_ARGUMENT);
+	c = BATdescriptor(*in_c);
+	CHECK(c != NULL, RUNTIME_OBJECT_MISSING);
+	CHECK(ATOMtype(BATttype(c)) == TYPE_oid, ILLEGAL_ARGUMENT);
+	d = BATdescriptor(*in_d);
+	CHECK(d != NULL, RUNTIME_OBJECT_MISSING);
+	CHECK(ATOMtype(BATttype(d)) == TYPE_oid, ILLEGAL_ARGUMENT);
+
+	// a is the left candidate list, b is the right candidate list
+	// we assume that both lists are ordered
+	CHECK(a->T.sorted, ILLEGAL_ARGUMENT);
+	CHECK(b->T.sorted, ILLEGAL_ARGUMENT);
+
+//	bat_debug(a); // DEBUG ONLY
+//	bat_debug(b);
+//	bat_debug(c);
+//	bat_debug(d);
+
+	left = (oid*) a->T.heap.base;
+	right = (oid*) b->T.heap.base;
+	left_src = (oid*) c->T.heap.base;
+	right_dst = (oid*) d->T.heap.base;
+	left_sz = BATcount(a);
+	right_sz = BATcount(b);
+	min_sz = left_sz < right_sz ? left_sz : right_sz;
+	while(i < left_sz && j < right_sz) {
+		// so far so good
+		if(left[i] == right[j]) {
+			if(changes) {
+				assert(edge_src != NULL && edge_dst != NULL && "The BATs should have been initialized when the flag `changes' was set");
+				BUNappend(edge_src, left_src + i, false);
+				BUNappend(edge_dst, right_dst + j, false);
+				BUNappend(candidates, left + i, false);
+			}
+			i++; j++;
+		} else if(left[i] < right[j]){
+			if(!changes){
+				assert(i == j);
+				rc = GRAPHinterjoinlist_init_changes(&candidates, &edge_src, &edge_dst, min_sz, i, left, left_src, right_dst);
+				if(rc) goto error;
+				changes = true;
+			}
+			i++;
+		} else { // left[i] > right[j]
+			if(!changes){
+				assert(i == j);
+				rc = GRAPHinterjoinlist_init_changes(&candidates, &edge_src, &edge_dst, min_sz, i, left, left_src, right_dst);
+				if(rc) goto error;
+				changes = true;
+			}
+
+			j++;
+		}
+	}
+
+	// final case: left_sz < right_sz and up to left_sz both left and right are equal, then remove all the remaining
+	// elements. Same for the opposite case when right_sz < left_sz
+	if(!changes && (i < left_sz || j < right_sz)){
+		rc = GRAPHinterjoinlist_init_changes(&candidates, &edge_src, &edge_dst, min_sz, i, left, left_src, right_dst);
+		if(rc) goto error;
+		changes = true;
+	}
+
+//	if(changes){ // DEBUG ONLY
+//		bat_debug(candidates);
+//		bat_debug(edge_src);
+//		bat_debug(edge_dst);
+//	}
+
+success:
+	// use the materialized columns as output
+	if(changes){
+		assert(candidates != NULL && edge_src != NULL && edge_dst != NULL);
+		// output
+		*out_candidates = candidates->batCacheid;
+		*out_edge_src = edge_src->batCacheid;
+		*out_edge_dst = edge_dst->batCacheid;
+		BBPkeepref(candidates->batCacheid);
+		BBPkeepref(edge_src->batCacheid);
+		BBPkeepref(edge_dst->batCacheid);
+
+		// release the input
+		BBPunfix(a->batCacheid);
+		BBPunfix(b->batCacheid);
+		BBPunfix(c->batCacheid);
+		BBPunfix(d->batCacheid);
+	} else { // no changes, keep the same input
+		*out_candidates = a->batCacheid;
+		BBPkeepref(a->batCacheid);
+		BBPunfix(b->batCacheid); // this is equal to 'a'
+		*out_edge_src = c->batCacheid;
+		BBPkeepref(c->batCacheid);
+		*out_edge_dst = d->batCacheid;
+		BBPkeepref(d->batCacheid);
+	}
+
+	return rc;
+error:
+	if(a != NULL) { BBPunfix(a->batCacheid); }
+	if(b != NULL) { BBPunfix(b->batCacheid); }
+	if(c != NULL) { BBPunfix(c->batCacheid); }
+	if(d != NULL) { BBPunfix(d->batCacheid); }
+	if(candidates != NULL) { BBPunfix(candidates->batCacheid); };
+	if(edge_src != NULL) { BBPunfix(edge_src->batCacheid); };
+	if(edge_dst != NULL) { BBPunfix(edge_dst->batCacheid); };
 
 	return rc;
 }

@@ -10,6 +10,10 @@
 
 #include "debug.h"
 
+// if set, sort the inputs if they are not already sorted. Otherwise assume they are already sorted, i.e. codegen
+// should ensure this property.
+//#define GRAPHinterjoinlist_SORT // set from the Makefile
+
 #if !defined(NDEBUG) /* debug only */
 #define _CHECK_ERRLINE_EXPAND(LINE) #LINE
 #define _CHECK_ERRLINE(LINE) _CHECK_ERRLINE_EXPAND(LINE)
@@ -190,6 +194,34 @@ error: // nop, in case of error the bats are going to be release by the invoker
 	return rc;
 }
 
+#if defined(GRAPHinterjoinlist_SORT)
+// prototypes, core functions of MonetDB
+str ALGsort12(bat *result, bat *norder, const bat *bid, const bit *reverse, const bit *stable);
+str ALGprojection(bat *result, const bat *lid, const bat *rid);
+
+// sort the inputs according to candidates
+static str /* private function, do not export as it does not respect the MAL API  */
+GRAPHinterjoinlist_sort(bat* candidates, bat* edges){
+	str rc = MAL_SUCCEED;
+	bat* perm = NULL;
+	bit reverse = false;
+	bit stable = false;
+
+	rc = ALGsort12(candidates, perm, candidates, &reverse, &stable);
+	if (rc != NULL) goto error;
+	rc = ALGprojection(edges, perm, edges);
+	if (rc != NULL) goto error;
+
+	// remove the voids
+	rc = GRAPHvoid2oid(candidates, candidates);
+	if (rc != NULL) goto error;
+	rc = GRAPHvoid2oid(edges, edges);
+	if (rc != NULL) goto error;
+error:
+	return rc;
+}
+#endif
+
 /**
  * Remove tuples with values marked as NULL
  */
@@ -207,29 +239,54 @@ GRAPHinterjoinlist(bat* out_candidates, bat* out_edge_src, bat* out_edge_dst,
 	oid* __restrict right_dst = NULL; // dst edges
 	size_t i = 0, j = 0, left_sz = 0, right_sz = 0, min_sz = 0;
 
-	// acquire the input bats
+	// acquire the input candidates
 	a = BATdescriptor(*in_a);
 	CHECK(a != NULL, RUNTIME_OBJECT_MISSING);
 	CHECK(ATOMtype(BATttype(a)) == TYPE_oid, ILLEGAL_ARGUMENT);
 	b = BATdescriptor(*in_b);
 	CHECK(b != NULL, RUNTIME_OBJECT_MISSING);
 	CHECK(ATOMtype(BATttype(b)) == TYPE_oid, ILLEGAL_ARGUMENT);
+
+#if defined(GRAPHinterjoinlist_SORT)
+	// sort the inputs (if they are not already sorted)
+	if(!a->T.sorted){
+		BBPunfix(a->batCacheid); a = NULL;
+
+		rc = GRAPHinterjoinlist_sort(in_a, in_c);
+		if(rc != NULL) goto error;
+
+		// re-acquire the bat
+		a = BATdescriptor(*in_a);
+		CHECK(a != NULL, RUNTIME_OBJECT_MISSING);
+		CHECK(ATOMtype(BATttype(a)) == TYPE_oid, ILLEGAL_ARGUMENT);
+		assert(a->T.sorted);
+	}
+	if(!b->T.sorted){
+		BBPunfix(b->batCacheid); b = NULL;
+
+		rc = GRAPHinterjoinlist_sort(in_b, in_d);
+		if(rc != NULL) goto error;
+
+		// re-acquire the bat
+		b = BATdescriptor(*in_b);
+		CHECK(b != NULL, RUNTIME_OBJECT_MISSING);
+		CHECK(ATOMtype(BATttype(b)) == TYPE_oid, ILLEGAL_ARGUMENT);
+		assert(b->T.sorted);
+	}
+#else
+	// a is the left candidate list, b is the right candidate list
+	// at this point both input should be sorted
+	CHECK(a->T.sorted, ILLEGAL_ARGUMENT);
+	CHECK(b->T.sorted, ILLEGAL_ARGUMENT);
+#endif
+
+	// acquire the input edges
 	c = BATdescriptor(*in_c);
 	CHECK(c != NULL, RUNTIME_OBJECT_MISSING);
 	CHECK(ATOMtype(BATttype(c)) == TYPE_oid, ILLEGAL_ARGUMENT);
 	d = BATdescriptor(*in_d);
 	CHECK(d != NULL, RUNTIME_OBJECT_MISSING);
 	CHECK(ATOMtype(BATttype(d)) == TYPE_oid, ILLEGAL_ARGUMENT);
-
-	// a is the left candidate list, b is the right candidate list
-	// we assume that both lists are ordered
-	CHECK(a->T.sorted, ILLEGAL_ARGUMENT);
-	CHECK(b->T.sorted, ILLEGAL_ARGUMENT);
-
-//	bat_debug(a); // DEBUG ONLY
-//	bat_debug(b);
-//	bat_debug(c);
-//	bat_debug(d);
 
 	left = (oid*) a->T.heap.base;
 	right = (oid*) b->T.heap.base;
@@ -238,54 +295,43 @@ GRAPHinterjoinlist(bat* out_candidates, bat* out_edge_src, bat* out_edge_dst,
 	left_sz = BATcount(a);
 	right_sz = BATcount(b);
 	min_sz = left_sz < right_sz ? left_sz : right_sz;
-	while(i < left_sz && j < right_sz) {
-		// so far so good
-		if(left[i] == right[j]) {
-			if(changes) {
-				assert(edge_src != NULL && edge_dst != NULL && "The BATs should have been initialized when the flag `changes' was set");
+
+	// first loop, skip equal values at the begin
+	for(i = 0; i < min_sz && left[i] == right[i]; i++) /* nop */;
+	j = i;
+
+	// are there still elements to inspect ?
+	if(i < left_sz || j < right_sz) { // uh oh, we need to remove items from the candidate lists
+		rc = GRAPHinterjoinlist_init_changes(&candidates, &edge_src, &edge_dst, min_sz, i, left, left_src, right_dst);
+		if(rc) goto error;
+		assert(candidates != NULL && edge_src != NULL && edge_dst != NULL &&
+				"The BATs should have been initialized by GRAPHinterjoinlist_init_changes");
+		changes = true;
+
+		// perform a merge scan
+		while(i < left_sz && j < right_sz) {
+			if(left[i] == right[j]){
 				BUNappend(edge_src, left_src + i, false);
 				BUNappend(edge_dst, right_dst + j, false);
 				BUNappend(candidates, left + i, false);
+				i++; j++;
+			} else if (left[i] < right[j]) {
+				i++;
+			} else { // left[i] > right[j]
+				j++;
 			}
-			i++; j++;
-		} else if(left[i] < right[j]){
-			if(!changes){
-				assert(i == j);
-				rc = GRAPHinterjoinlist_init_changes(&candidates, &edge_src, &edge_dst, min_sz, i, left, left_src, right_dst);
-				if(rc) goto error;
-				changes = true;
-			}
-			i++;
-		} else { // left[i] > right[j]
-			if(!changes){
-				assert(i == j);
-				rc = GRAPHinterjoinlist_init_changes(&candidates, &edge_src, &edge_dst, min_sz, i, left, left_src, right_dst);
-				if(rc) goto error;
-				changes = true;
-			}
-
-			j++;
 		}
-	}
-
-	// final case: left_sz < right_sz and up to left_sz both left and right are equal, then remove all the remaining
-	// elements. Same for the opposite case when right_sz < left_sz
-	if(!changes && (i < left_sz || j < right_sz)){
-		rc = GRAPHinterjoinlist_init_changes(&candidates, &edge_src, &edge_dst, min_sz, i, left, left_src, right_dst);
-		if(rc) goto error;
-		changes = true;
-	}
-
-//	if(changes){ // DEBUG ONLY
-//		bat_debug(candidates);
-//		bat_debug(edge_src);
-//		bat_debug(edge_dst);
-//	}
+	} // else we are done!
 
 success:
 	// use the materialized columns as output
 	if(changes){
 		assert(candidates != NULL && edge_src != NULL && edge_dst != NULL);
+
+//		bat_debug(candidates); // DEBUG ONLY
+//		bat_debug(edge_src);
+//		bat_debug(edge_dst);
+
 		// output
 		*out_candidates = candidates->batCacheid;
 		*out_edge_src = edge_src->batCacheid;

@@ -26,6 +26,10 @@ CFLAGS := ${common_flags}
 CXXFLAGS := -std=c++11 ${common_flags}
 LDFLAGS := -L${libdir} -lmonetdb5
 
+# Configuration flag, set GRAPHinterjoinlist_SORT to sort the input candidates inside the function
+# graph.intersect_join_lists. If unset, the codegen must ensure that the candidates are already sorted
+CFLAGS += -DGRAPHinterjoinlist_SORT
+
 # List of the sources to compile
 sources := debug.cpp miscellaneous.c preprocess.c spfw.cpp
 

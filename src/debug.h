@@ -8,14 +8,7 @@
 #ifndef DEBUG_H_
 #define DEBUG_H_
 
-#ifdef __cplusplus
-extern "C" {
-#undef ATOMIC_FLAG_INIT // make MonetDB happy
-#endif
-#include "monetdb_config.h"
-#ifdef __cplusplus
-#undef throw // this is a keyword in C++
-#endif
+#include "monetdb_config.hpp"
 
 // Print the whole content of a BAT to stdout (similar to io.print);
 void _bat_debug0(const char* prefix, BAT* b);
@@ -24,7 +17,6 @@ void _bat_debug0(const char* prefix, BAT* b);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
 
 /**
  * In C++ use the single macro DEBUG_DUMP(x) to dump the content of any variable

@@ -1,11 +1,11 @@
-#ifndef RADIXHEAP_HPP_
-#define RADIXHEAP_HPP_
+#ifndef ALGORITHM_SEQUENTIAL_DIJKSTRA_RADIXHEAP_HPP_
+#define ALGORITHM_SEQUENTIAL_DIJKSTRA_RADIXHEAP_HPP_
 
 #include <cassert>
 #include <cstring>
 #include <limits>
 
-namespace monetdb {
+namespace gr8 { namespace algorithm { namespace sequential {
 
 // Compute the most significant distinguishing index
 #if defined(__GNUG__) or defined(__clang__) // gcc & clang only
@@ -25,10 +25,15 @@ namespace radixheap_internal {
 	}
 
 	template<typename T>
-	typename std::enable_if<sizeof(T) != 8 && sizeof(T) != 4, int>::type MSD(T a, T b){
-		if(a == b) return 0; // edge case
-		return floor(log2(a ^ b)) +1; // text book implementation
+	typename std::enable_if<sizeof(T) < 4, int>::type MSD(T a, T b){
+		return MSD((uint32_t) a, (uint32_t) b);
 	}
+
+	template<typename T>
+	typename std::enable_if<sizeof(T) < 8 && sizeof(T) != 4, int>::type MSD(T a, T b){
+		return MSD((uint64_t) a, (uint64_t) b);
+	}
+
 #else // other compilers
 	template<typename T>
 	int MSD(T a, T b){
@@ -164,6 +169,6 @@ public:
 
 };
 
-} // namespace monetdb
+}}} // namespace gr8::algorithm::sequential
 
-#endif /* RADIXHEAP_HPP_ */
+#endif /* ALGORITHM_SEQUENTIAL_DIJKSTRA_RADIXHEAP_HPP_ */

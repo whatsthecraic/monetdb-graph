@@ -21,7 +21,7 @@ endif
 # Compiler & linker settings
 includedir := ${monetdbpath}/include/monetdb/
 libdir := ${monetdbpath}/lib/
-common_flags := -O0 -g -fPIC -I${includedir} -Isrc/
+common_flags := -O0 -g -Wall -fPIC -I${includedir} -Isrc/
 CFLAGS := ${common_flags}
 CXXFLAGS := -std=c++11 ${common_flags}
 LDFLAGS := -L${libdir} -lmonetdb5
@@ -31,7 +31,20 @@ LDFLAGS := -L${libdir} -lmonetdb5
 CFLAGS += -DGRAPHinterjoinlist_SORT
 
 # List of the sources to compile
-sources := debug.cpp miscellaneous.c preprocess.c spfw.cpp
+sources := \
+	bat_handle.cpp \
+	debug.cpp \
+	errorhandling.cpp \
+	graph_descriptor.cpp \
+	joiner.cpp \
+	miscellaneous.c \
+	parse_request.cpp \
+	prepare.cpp \
+	preprocess.c \
+	query.cpp \
+	spfw.cpp \
+	algorithm/sequential/dijkstra/dijkstra.cpp \
+	third-party/tinyxml2.cpp
 
 # Name of the produces library
 library := libgraph.so
@@ -43,6 +56,7 @@ builddir := build
 makedepend_c = @$(CC) -MM $(CPPFLAGS) $(CFLAGS) -MP -MT $@ -MF $(basename $@).d $<
 makedepend_cxx = @$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) -MP -MT $@ -MF $(basename $@).d $<
 objectdir := ${builddir}/objects
+objectdirs := $(patsubst %./, %, $(sort $(addprefix ${objectdir}/, $(dir ${sources}))))
 objects_c := $(addprefix ${objectdir}/, $(patsubst %.c, %.o, $(filter %.c, ${sources})))
 objects_cxx := $(addprefix ${objectdir}/, $(patsubst %.cpp, %.o, $(filter %.cpp, ${sources})))
 objects := ${objects_c} ${objects_cxx}
@@ -64,17 +78,17 @@ ${builddir}/${library} : ${objects} | ${builddir}
 # build/objects/preprocess.o: src/preprocess.cpp src/preprocess.c
 
 # Objects from C files
-${objects_c} : ${objectdir}/%.o : src/%.c | ${objectdir}
+${objects_c} : ${objectdir}/%.o : src/%.c | ${objectdirs}
 	${makedepend_c}
 	${CC} -c ${CPPFLAGS} ${CFLAGS} $< -o $@
 
 # Objects from C++ files
-${objects_cxx} : ${objectdir}/%.o : src/%.cpp | ${objectdir}
+${objects_cxx} : ${objectdir}/%.o : src/%.cpp | ${objectdirs}
 	${makedepend_cxx}
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # Create the build directory
-${builddir} ${objectdir}:
+${builddir} ${objectdirs}:
 	mkdir -pv $@
 
 # Dependencies to update the translation units if a header has been altered

@@ -31,7 +31,7 @@ static oid get(BAT* b, BUN p){
 
 // MAL interface
 mal_export str
-GRAPHprefixsum(bat* id_output, bat* id_input, lng* ptr_domain_cardinality) {
+GRAPHprefixsum(bat* id_output, const bat* id_input, const lng* ptr_domain_cardinality) {
 	const char* function_name = "graph.prefixsum";
 	str rc = MAL_SUCCEED;
 	BAT *input = NULL, *output = NULL;
@@ -203,13 +203,13 @@ str ALGprojection(bat *result, const bat *lid, const bat *rid);
 static str /* private function, do not export as it does not respect the MAL API  */
 GRAPHinterjoinlist_sort(bat* candidates, bat* edges){
 	str rc = MAL_SUCCEED;
-	bat* perm = NULL;
+	bat perm = -1;
 	bit reverse = false;
 	bit stable = false;
 
-	rc = ALGsort12(candidates, perm, candidates, &reverse, &stable);
+	rc = ALGsort12(candidates, &perm, candidates, &reverse, &stable);
 	if (rc != NULL) goto error;
-	rc = ALGprojection(edges, perm, edges);
+	rc = ALGprojection(edges, &perm, edges);
 	if (rc != NULL) goto error;
 
 	// remove the voids
@@ -323,7 +323,7 @@ GRAPHinterjoinlist(bat* out_candidates, bat* out_edge_src, bat* out_edge_dst,
 		}
 	} // else we are done!
 
-success:
+//success:
 	// use the materialized columns as output
 	if(changes){
 		assert(candidates != NULL && edge_src != NULL && edge_dst != NULL);
@@ -584,7 +584,7 @@ GRAPHsave(void* dummy, str* path, bat* id_qfrom, bat* id_qto, bat* id_weights, b
 	cur_oid = qfrom->hseqbase;
 
 	for(BUN i = 0; i < q_sz; i++){
-		fprintf(file, "%zu -> %zu [%lld]: ", aqfrom[i], aqto[i], aqweights[i]);
+		fprintf(file, "%zu -> %zu [%lu]: ", aqfrom[i], aqto[i], aqweights[i]);
 
 		first_value = true;
 		// move to the current oid

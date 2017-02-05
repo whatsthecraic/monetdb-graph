@@ -5,13 +5,13 @@
  *      Author: Dean De Leo
  */
 
-#ifndef QUEUE_HPP_
-#define QUEUE_HPP_
+#ifndef ALGORITHM_SEQUENTIAL_DIJKSTRA_QUEUE_HPP_
+#define ALGORITHM_SEQUENTIAL_DIJKSTRA_QUEUE_HPP_
 
-#include "queue/fifo.hpp"
-#include "queue/radixheap.hpp"
+#include "fifo.hpp"
+#include "radixheap.hpp"
 
-namespace monetdb {
+namespace gr8 { namespace algorithm { namespace sequential {
 
 // Primary template
 template<typename vertex_t, typename distance_t, typename _enable = void>
@@ -27,10 +27,11 @@ struct QueueDijkstra<vertex_t, void>{
 
 // Radix heap
 template<typename vertex_t, typename distance_t>
-struct QueueDijkstra<vertex_t, distance_t, typename std::enable_if<std::is_unsigned<distance_t>::value>::type >{
+struct QueueDijkstra<vertex_t, distance_t, typename std::enable_if<std::is_integral<distance_t>::value>::type >{
 	using type = RadixHeap<vertex_t, distance_t>;
 };
 
 
-} // namespace monetdb
-#endif /* QUEUE_HPP_ */
+}}} // namespace gr8::algorithm::sequential
+
+#endif /* ALGORITHM_SEQUENTIAL_DIJKSTRA_QUEUE_HPP_ */

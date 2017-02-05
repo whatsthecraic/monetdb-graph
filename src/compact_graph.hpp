@@ -1,16 +1,15 @@
-#ifndef GRAPH_HPP_
-#define GRAPH_HPP_
+#ifndef COMPACT_GRAPH_HPP_
+#define COMPACT_GRAPH_HPP_
 
 #include <cassert>
 #include <cstddef> // std::size_t
 #include <iostream>
 
-namespace monetdb {
+namespace gr8 {
 
 	// Edges description
-
 	template<typename V, typename W = void>
-	class Edge {
+	class CompactEdge {
 	public:
 	    using vertex_t = V;
 	    using cost_t = W;
@@ -18,14 +17,14 @@ namespace monetdb {
 		const vertex_t v;
 		const cost_t  w;
 	public:
-		Edge(V dst, W cost) : v(dst), w(cost) { };
+		CompactEdge(V dst, W cost) : v(dst), w(cost) { };
 
 		vertex_t dest() const { return v; }
 		cost_t cost() const { return w; }
 	};
 
     template<typename V>
-    class Edge<V, void> {
+    class CompactEdge<V, void> {
     public:
         using vertex_t = V;
         using cost_t = std::size_t;
@@ -34,7 +33,7 @@ namespace monetdb {
         const vertex_t v;
 
     public:
-        Edge(V dst) : v(dst) { };
+        CompactEdge(V dst) : v(dst) { };
 
         vertex_t dest() const { return v; }
         cost_t cost() const { return 1; }
@@ -43,9 +42,9 @@ namespace monetdb {
     // Graph representation
 
 	template<typename V, typename W = void>
-	class Graph {
+	class CompactGraph {
 	public:
-	    using edge_t = Edge<V, W>;
+	    using edge_t = CompactEdge<V, W>;
 	    using vertex_t = typename edge_t::vertex_t;
 	    using cost_t = typename edge_t::cost_t;
 
@@ -55,13 +54,13 @@ namespace monetdb {
 		vertex_t* __restrict edges;
 		cost_t* __restrict weights;
 
-		Graph(const Graph&) = delete;
-		Graph& operator=(Graph&) = delete;
+		CompactGraph(const CompactGraph&) = delete;
+		CompactGraph& operator=(CompactGraph&) = delete;
 
 	public:
 		template<typename type = W, bool dummy = true>
 		class iterator_fwd{
-			friend class Graph;
+			friend class CompactGraph;
 			using fwd_t = iterator_fwd<W, dummy>;
 		private:
 			vertex_t* __restrict base_edges;
@@ -84,7 +83,7 @@ namespace monetdb {
 
 		template<bool dummy>
 		class iterator_fwd<void, dummy>{
-			friend class Graph;
+			friend class CompactGraph;
 			using fwd_t = iterator_fwd<W, dummy>;
 		private:
 			vertex_t* __restrict base_edges;
@@ -107,7 +106,7 @@ namespace monetdb {
 		template<typename type = W, bool dummy = true>
 		class iterator_make{
 		public:
-			friend class Graph;
+			friend class CompactGraph;
 			using fwd_t = iterator_fwd<W, dummy>;
 		private:
 			V* base_edges;
@@ -124,7 +123,7 @@ namespace monetdb {
 		template<bool dummy>
 		class iterator_make<void, dummy>{
 		private:
-			friend class Graph;
+			friend class CompactGraph;
 			using fwd_t = iterator_fwd<W, dummy>;
 
 			V* base_edges;
@@ -139,11 +138,11 @@ namespace monetdb {
 
 
 
-		Graph(std::size_t size, vertex_t* vertices, vertex_t* edges, cost_t* weights) noexcept :
+		CompactGraph(std::size_t size, vertex_t* vertices, vertex_t* edges, cost_t* weights) noexcept :
 			vertex_count(size), vertices(vertices), edges(edges), weights(weights){
 		}
 
-		~Graph() noexcept { /* nop */ }
+		~CompactGraph() noexcept { /* nop */ }
 
 
 		std::size_t num_vertices() const noexcept {
@@ -163,8 +162,7 @@ namespace monetdb {
 		}
 
 	};
-}
 
+} /*namespace gr8 */
 
-
-#endif /* GRAPH_HPP_ */
+#endif /* COMPACT_GRAPH_HPP_ */

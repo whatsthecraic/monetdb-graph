@@ -1,0 +1,145 @@
+#include <iostream>
+
+#include "errorhandling.hpp"
+#include "prepare.hpp"
+#include "monetdb_config.hpp"
+#include "query.hpp"
+
+#include "algorithm/sequential/dijkstra/dijkstra.hpp"
+
+using namespace gr8;
+using namespace std;
+
+
+/******************************************************************************
+ *                                                                            *
+ *   Process a request                                                        *
+ *                                                                            *
+ ******************************************************************************/
+
+static void handle_request(Query& query){
+	reorder_computations(query);
+	prepare_graph(query);
+
+	algorithm::sequential::SequentialDijkstra algo;
+
+	// first time, execute join the tuples
+	algo.execute(query, query.shortest_paths.size() > 0 ? &(query.shortest_paths.front()) : nullptr, true);
+
+	// next iterations, only compute a shortest path
+	for(size_t i = 1, sz = query.shortest_paths.size(); i < sz; i++){
+		ShortestPath* sp = &query.shortest_paths[i];
+		algo.execute(query, sp, false);
+	}
+}
+
+
+/******************************************************************************
+ *                                                                            *
+ *   MonetDB interface                                                        *
+ *                                                                            *
+ ******************************************************************************/
+extern "C" {
+
+// C error handling
+#undef CHECK // in case already exists
+#if !defined(NDEBUG) /* debug only */
+#define _CHECK_ERRLINE_EXPAND(LINE) #LINE
+#define _CHECK_ERRLINE(LINE) _CHECK_ERRLINE_EXPAND(LINE)
+#define _CHECK_ERRMSG(EXPR, ERROR) "[" __FILE__ ":" _CHECK_ERRLINE(__LINE__) "] " ERROR ": `" #EXPR "'"
+#else /* release mode */
+#define _CHECK_ERRMSG(EXPR, ERROR) ERROR
+#endif
+#define CHECK( EXPR, ERROR ) if ( !(EXPR) ) \
+	{ rc = createException(MAL, function_name /*__FUNCTION__?*/, _CHECK_ERRMSG( EXPR, ERROR ) ); goto error; }
+
+// Defined in <mal_interpreter.h>
+ptr getArgReference(MalStkPtr stk, InstrPtr pci, int k);
+
+// Entry point from the MAL layer
+// We have our little API convention with the codegen...
+str GRAPHspfw(void* cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr instrPtr) noexcept {
+	str rc = MAL_SUCCEED;
+	const char* function_name = "graph.spfw";
+	Query query;
+
+	// helpers to get & set the the MAL arguments
+	auto get_arg = [stk, instrPtr](int index) { return (bat*) getArgReference(stk, instrPtr, index); };
+	auto set_arg = [stk, instrPtr](int index, bat value) { stk->stk[instrPtr->argv[index]].val.bval = value; };
+
+	try {
+		//  input = BATdescriptor(*((bat*)getArgReference(stk, p, p->retc)));
+		int arg_pos = instrPtr->retc;
+		int spfw_flags = *((int*) getArgReference(stk, instrPtr, instrPtr->argc -1));
+
+		// candidates lists
+		query.candidates_left = BatHandle( get_arg(arg_pos++) );
+		query.candidates_right = BatHandle(  get_arg(arg_pos++) );
+
+		// query src/dst
+		query.query_src = BatHandle( get_arg(arg_pos++) );
+		query.query_dst = BatHandle(  get_arg(arg_pos++) );
+
+		// graph descriptor
+		if(spfw_flags & SPFW_GLOBAL_GRAPH_DESCR_COLUMNS){
+			BatHandle edges_src{get_arg(arg_pos++)};
+			BatHandle edges_dst{get_arg(arg_pos++)};
+			query.graph.reset( new GraphDescriptorColumns(move(edges_src), move(edges_dst)) );
+		} else {
+			MAL_ERROR(ILLEGAL_ARGUMENT, "Invalid graph type");
+		}
+
+		// parse the shortest paths to execute
+		int output_index = 2; // 0 = jl, 1 = jr
+		while(arg_pos < instrPtr->argc -1) {
+			int flags = *((int*) getArgReference(stk, instrPtr, arg_pos++));
+			BatHandle weights;
+			bool compute_path = flags & SPFW_LOCAL_COMPUTE_PATH;
+
+			if((flags & SPFW_LOCAL_COMPUTE_BFS) == false){
+				weights = get_arg(arg_pos++);
+			}
+
+			query.request_shortest_path(move(weights), compute_path, output_index);
+			output_index++; // cost
+			if(compute_path) output_index++; // path
+		}
+
+		// execute the query
+		handle_request(query);
+
+		// output
+		// candidate ids
+		set_arg(0, query.candidates_left.release_logical()); // jl
+		set_arg(1, query.candidates_right.release_logical()); // jr
+		// shortest paths
+		for(auto& sp : query.shortest_paths){
+			set_arg(sp.get_output_index(), sp.computed_cost.release_logical() );
+			if(sp.compute_path()){
+				set_arg(sp.get_output_index() +1, sp.computed_path_lengths.release_logical() );
+				set_arg(sp.get_output_index() +2, sp.computed_path_values.release_logical() );
+			}
+		}
+
+	} catch(gr8::Exception& e){ // internal exception
+		if(dynamic_cast<gr8::MalException*>(&e)){
+			rc = createException(MAL, function_name, ((MalException*) &e)->get_mal_error());
+		} else {
+			rc = createException(MAL, function_name, OPERATION_FAILED);
+		}
+
+        cerr << ">> Exception " << e.getExceptionClass() << " raised at " << e.getFile() << ", line: " << e.getLine() << "\n";
+        cerr << ">> Cause: " << e.what() << "\n";
+        cerr << ">> Operation failed!" << endl;
+
+        goto error;
+	} catch(std::bad_alloc& b) {
+		CHECK(0, MAL_MALLOC_FAIL);
+	} catch(...) { // no exception shall pass
+		CHECK(0, OPERATION_FAILED); // generic error
+	}
+
+error:
+	return rc;
+}
+} // extern "C"

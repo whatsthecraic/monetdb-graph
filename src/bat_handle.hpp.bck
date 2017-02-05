@@ -1,0 +1,155 @@
+/*
+ * bat_handle.hpp
+ *
+ *  Created on: Feb 3, 2017
+ *      Author: dleo@cwi.nl
+ */
+
+#ifndef BAT_HANDLE_HPP_
+#define BAT_HANDLE_HPP_
+
+#include <stdexcept>
+
+#include "errorhandling.hpp"
+#include "monetdb_config.hpp"
+
+namespace gr8  {
+
+class BatHandle {
+private:
+	BAT* _content;
+
+	// disallow copies, otherwise we need an internal reference counting (shared_ptr)
+	BatHandle(const BatHandle&) = delete;
+	BatHandle& operator= (const BatHandle&) = delete;
+
+public:
+	BatHandle() : _content(nullptr){ }
+
+	BatHandle(BAT* b){
+		_content = b;
+		MAL_ASSERT(_content != nullptr, RUNTIME_OBJECT_MISSING);
+	}
+
+	BatHandle(bat* b, bool allow_null = false){
+		if(b == nullptr){
+			if(allow_null){
+				_content = nullptr;
+			} else {
+				MAL_ASSERT(0, ILLEGAL_ARGUMENT);
+			}
+		} else {
+			_content = BATdescriptor(*b);
+			MAL_ASSERT(_content != nullptr, RUNTIME_OBJECT_MISSING);
+		}
+	}
+
+	// move semantics
+	BatHandle(BatHandle&& h){ _content = h._content; h._content = nullptr; }
+	BatHandle& operator= (BatHandle&& h){
+		release_physical(); // release the previous bat
+		_content = h._content;
+		h._content = nullptr;
+		return *this;
+	}
+
+	~BatHandle(){
+		release_physical();
+	}
+
+	operator bool () const {
+		return _content != nullptr;
+	}
+
+	bat release_logical(){
+		bat id = 0;
+
+		if(_content){
+			id = _content->batCacheid;
+			BBPkeepref(id);
+			_content = NULL;
+		}
+
+		return id;
+	}
+
+	void release_physical(){
+		if(_content){
+			BBPunfix(_content->batCacheid);
+			_content = NULL;
+		}
+	}
+
+	BAT* get(){
+		CHECK_EXCEPTION(Exception, _content != nullptr, "Empty handle");
+		return _content;
+	}
+
+	BAT* get() const{
+		CHECK_EXCEPTION(Exception, _content != nullptr, "Empty handle");
+		return _content;
+	}
+
+	bat id(){
+		CHECK_EXCEPTION(Exception, _content != nullptr, "Empty handle");
+		return _content->batCacheid;
+	}
+
+	template<typename T>
+	T* array(){
+		CHECK_EXCEPTION(Exception, _content != nullptr, "Empty handle");
+		return reinterpret_cast<T*>(_content->T.heap.base);
+	}
+
+	template<typename T>
+	T* array() const{
+		CHECK_EXCEPTION(Exception, _content != nullptr, "Empty handle");
+		return reinterpret_cast<T*>(_content->T.heap.base);
+	}
+
+	template<typename T>
+	T first(){
+		CHECK_EXCEPTION(Exception, !empty(), "The BAT is empty");
+		return array<T>()[0];
+	}
+
+	template<typename T>
+	T last(){
+		CHECK_EXCEPTION(Exception, !empty(), "The BAT is empty");
+		return array<T>()[size()-1];
+	}
+
+	bool empty() const {
+		return size() > 0;
+	}
+
+	std::size_t size() const{
+		CHECK_EXCEPTION(Exception, _content != nullptr, "Empty handle");
+		return BATcount(_content);
+	}
+
+//	void reset(bat* b, bool allow_null = false) {
+//		release_physical();
+//		if(b == nullptr){
+//			if(allow_null){
+//				_content = nullptr;
+//			} else {
+//				MAL_ASSERT(0, ILLEGAL_ARGUMENT);
+//			}
+//		} else {
+//			_content = BATdescriptor(*b);
+//			MAL_ASSERT(_content != nullptr, RUNTIME_OBJECT_MISSING);
+//		}
+//	}
+//
+//	void reset(BAT* b){
+//		release_physical();
+//		MAL_ASSERT(b != nullptr, ILLEGAL_ARGUMENT);
+//		_content = b;
+//	}
+};
+
+
+}
+
+#endif /* BAT_HANDLE_HPP_ */

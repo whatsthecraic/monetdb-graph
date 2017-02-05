@@ -5,13 +5,13 @@
  *      Author: Dean De Leo
  */
 
-#ifndef FIFO_HPP_
-#define FIFO_HPP_
+#ifndef ALGORITHM_SEQUENTIAL_DIJKSTRA_FIFO_HPP_
+#define ALGORITHM_SEQUENTIAL_DIJKSTRA_FIFO_HPP_
 
 #include <cassert>
 #include <cstring> // memcpy
 
-namespace monetdb {
+namespace gr8 { namespace algorithm { namespace sequential {
 
 namespace fifo_internal {
     template<typename V, typename W>
@@ -113,8 +113,8 @@ public:
 
 };
 
-} // namespace monetdb
+}}} // namespace gr8::algorithm::sequential
 
 
 
-#endif /* FIFO_HPP_ */
+#endif /* ALGORITHM_SEQUENTIAL_DIJKSTRA_FIFO_HPP_ */

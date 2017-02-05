@@ -2,18 +2,7 @@
 #define COMMON_H_
 
 // MonetDB inclusions
-#ifdef __cplusplus
-extern "C" {
-#undef ATOMIC_FLAG_INIT // make MonetDB happy
-#endif
-#include "monetdb_config.h"
-#include "mal_exception.h"
-#ifdef __cplusplus
-#undef throw // this is a keyword in C++
-#endif
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
+#include "monetdb_config.hpp"
 
 // Error handling, using the convention that the label 'error' exists and can be jumped to, the variable
 // function_name indicates the name of the function, the variable rc exists and

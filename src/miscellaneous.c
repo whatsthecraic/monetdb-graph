@@ -10,9 +10,6 @@
 // MonetDB includes
 #include <gdk.h>
 
-// Defined in <mal_interpreter.h>
-ptr getArgReference(MalStkPtr stk, InstrPtr pci, int k);
-
 // Graph library includes
 #include "debug.h"
 

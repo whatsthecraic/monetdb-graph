@@ -17,7 +17,9 @@
 using namespace gr8;
 using namespace gr8::algorithm::sequential;
 
-
+SequentialDijkstra::SequentialDijkstra() {
+	/* nop */
+}
 
 template <typename V, typename W, typename G>
 static void execute_dijkstra0(Query& query, G& graph, ShortestPath* sp, bool join_results){

@@ -199,7 +199,8 @@ private:
 
 	void filter(Query& q){
 		assert(q.query_src.size() == q.query_dst.size() && q.query_dst.size()  == q.candidates_left.size());
-		vertex_t* __restrict src = q.query_src.array<oid>();
+//		oid* __restrict candidates = q.candidates_left.array<oid>();
+		vertex_t* __restrict src = q.query_src.array<vertex_t>();
 //		vertex_t* dst = q.query_dst.array<oid>();
 		const std::size_t size = q.query_src.size();
 
@@ -214,7 +215,7 @@ private:
 
 		std::size_t contiguous_sources = 1;
 		for(std::size_t i = 1; i < size; i++){
-			if(src[i] == src[i-1]) {
+			if(src[i] == src[i-1] /*&& candidates[i] == candidates[i-1]*/) {
 				contiguous_sources++;
 			} else {
 				flush(i - contiguous_sources, contiguous_sources);

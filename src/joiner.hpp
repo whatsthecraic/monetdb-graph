@@ -16,6 +16,10 @@ namespace gr8 {
 
 class Joiner {
 	Query& query;
+	const oid* __restrict cl0; // candidate array (left)
+	const oid* __restrict cr0; // candidate array (right)
+	const oid* __restrict el0; // current edges src
+	const oid* __restrict er0; // current edges src
 	BatHandle jl; // temporary left (only valid in case of changes)
 	BatHandle jr; // temporary right (only valid in case of changes)
 	BatHandle el; // temporary edges src

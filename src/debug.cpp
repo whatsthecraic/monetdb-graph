@@ -4,15 +4,7 @@
  *  Created on: 29 Sep 2016
  *      Author: Dean De Leo
  */
-#include <iostream>
-
-#undef ATOMIC_FLAG_INIT // make MonetDB happy
-// MonetDB include files
-extern "C" {
-#include "monetdb_config.h"
-#include "mal_exception.h"
-}
-#undef throw // this is a keyword in C++
+#include "debug.h"
 
 using namespace std;
 
@@ -31,7 +23,7 @@ static void _bat_debug_T(BAT* b){
     // BATatoms is defined in monetdb/gdk/gdk_atoms.c
     atomDesc* type = BATatoms + (b->ttype);
 
-    cout << "hseqbase: " << b->hseqbase << ", count: " << A_sz << ", type: " << type->name << " (" << (int) b->ttype << ")\n";
+    cout << "id: " << b->batCacheid << ", hseqbase: " << b->hseqbase << ", count: " << A_sz << ", type: " << type->name << " (" << (int) b->ttype << ")\n";
     for(size_t i = 0; i < A_sz; i++){
         cout << "[" << i << "] " << A[i] << '\n';
     }
@@ -40,7 +32,7 @@ static void _bat_debug_T(BAT* b){
 template<>
 void _bat_debug_T<void>(BAT* b){
     using std::cout;
-    cout << "hseqbase: " << b->hseqbase << ", count: " << BATcount(b) << ", TYPE_void, start of the sequence: " << b->T.seq << "\n";
+    cout << "id: " << b->batCacheid << ", hseqbase: " << b->hseqbase << ", count: " << BATcount(b) << ", TYPE_void, start of the sequence: " << b->T.seq << "\n";
 }
 
 
@@ -76,3 +68,27 @@ void _bat_debug0(const char* prefix, BAT* b){
 
 } /* extern "C" */
 
+
+// __debug_dump0 specializations
+template <>
+void _debug_dump0<BAT*>(const char* prefix, BAT* value){
+	_bat_debug0(prefix, value);
+}
+template <>
+void _debug_dump0<bool>(const char* prefix, bool value){
+	std::cout << prefix << ": " << std::boolalpha << value << std::endl;
+}
+template <>
+void _debug_dump0<char*>(const char* prefix, char* value){
+	std::cout << value << std::endl;
+}
+template<>
+void _debug_dump0<gr8::BatHandle>(const char* prefix, gr8::BatHandle handle){
+	if(!handle.initialized()){
+		std::cout << prefix << ": <<handle not initialized>>" << std::endl;
+	} else if (handle.empty()){
+		std::cout << prefix << ": <<empty>>" << std::endl;
+	} else {
+		_debug_dump0<BAT*>(prefix, handle.get());
+	}
+}

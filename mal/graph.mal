@@ -58,7 +58,7 @@ comment "Split the input BAT into multiple bats of roughly equal size";
 #                                                                             #
 ###############################################################################
 
-pattern spfw( :any... ): any...
+pattern spfw(:str, :any... ): any...
 address GRAPHspfw
 comment "Shortest path operator";
 

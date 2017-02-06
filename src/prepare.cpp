@@ -5,10 +5,10 @@
  *      Author: Dean De Leo
  */
 
-#include <prepare.hpp>
+#include "prepare.hpp"
+
 #include <algorithm>
 #include <cassert>
-
 
 namespace gr8 {
 
@@ -111,11 +111,11 @@ static GraphDescriptorCompact* to_compact_sequential(Query& q, GraphDescriptorCo
 	max_value = std::max(max_value, edge_src.last<oid>());
 
 	// prefix sum on the src
-	lng max_value_lng = (lng) max_value;
+	lng count = (lng) max_value +1;
 	input = edge_src.id();
-	rc = GRAPHprefixsum(&output, &input, &max_value_lng);
+	rc = GRAPHprefixsum(&output, &input, &count);
 	MAL_ASSERT_RC();
-	graph->edge_src = BatHandle(&output);
+	edge_src = BatHandle(&output);
 
 	// finally permute the shortest paths weights
 	for(auto& sp : q.shortest_paths){
@@ -128,7 +128,7 @@ static GraphDescriptorCompact* to_compact_sequential(Query& q, GraphDescriptorCo
 	}
 
 	// done
-	return new GraphDescriptorCompact(std::move(edge_src), std::move(edge_dst), (size_t) max_value);
+	return new GraphDescriptorCompact(std::move(edge_src), std::move(edge_dst), (size_t) count);
 }
 
 void prepare_graph(Query& q){

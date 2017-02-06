@@ -17,9 +17,7 @@ class SequentialDijkstra{
 public:
 	SequentialDijkstra();
 
-
 	void execute(Query& query, ShortestPath* sp, bool join_results);
-
 };
 
 } } } // gr8::algorithm::sequential

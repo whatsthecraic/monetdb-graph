@@ -9,10 +9,18 @@
 
 #include <atomic>
 #include <cassert>
+#include <iostream>
 
 #include "errorhandling.hpp"
 
 using namespace gr8;
+
+// Error handling
+#ifdef NDEBUG
+	#define CHECK(condition, message) CHECK_EXCEPTION(Exception, condition, message)
+#else
+	#define CHECK(condition, message) assert(condition && message)
+#endif
 
 /******************************************************************************
  *                                                                            *
@@ -31,13 +39,15 @@ namespace {
 		~Counter() { release(); }
 
 		bat release(bool logical = false){
+			assert(counter >= 0);
+
 			bat id = -1;
 			if(content) {
 				id = content->batCacheid;
 				if(logical){
 					BBPkeepref(id);
 				} else {
-					BBPunfix(content->batCacheid);
+					BBPunfix(id);
 				}
 			}
 			content = nullptr;
@@ -45,9 +55,15 @@ namespace {
 			return id;
 		}
 
-		void incref() { counter++; }
+		void incref() {
+			assert(counter >= 0);
+			counter++;
+		}
 
-		int decref() { return --counter; }
+		int decref() {
+			assert(counter >= 1);
+			return --counter;
+		}
 	};
 
 }
@@ -96,7 +112,9 @@ void BatHandle::initialize(bat bat_id, bool allow_null){
 		initialize((BAT*) nullptr, allow_null);
 	} else {
 		auto content = BATdescriptor(bat_id);
-		MAL_ASSERT(content != nullptr, RUNTIME_OBJECT_MISSING);
+		if(content == nullptr){ // to ease debugging
+			MAL_ASSERT_MSG(false, RUNTIME_OBJECT_MISSING, "Invalid bat id: " << bat_id);
+		}
 		counter()->content = content;
 	}
 }
@@ -122,7 +140,6 @@ BatHandle& BatHandle::operator= (const BatHandle& h) {
 }
 BatHandle& BatHandle::operator= (BatHandle&& h){
 	decref();
-	if(counter()->counter == 0)
 	shared_ptr = h.shared_ptr;
 	h.shared_ptr = nullptr;
 	return *this;
@@ -132,12 +149,12 @@ BatHandle::~BatHandle(){
 	decref();
 }
 
-BatHandle::operator bool () const{
+bool BatHandle::initialized () const{
 	return shared_ptr != nullptr && counter()->content != nullptr;
 }
 
 bool BatHandle::empty() const {
-	return ((bool) *this) && size() > 0;
+	return !initialized() || size() == 0;
 }
 
 size_t BatHandle::size() const {
@@ -145,11 +162,11 @@ size_t BatHandle::size() const {
 }
 
 BAT* BatHandle::get(){
-	CHECK_EXCEPTION(Exception, shared_ptr != nullptr && counter()->content != nullptr, "Empty handle");
+	CHECK(shared_ptr != nullptr && counter()->content != nullptr, "Empty handle");
 	return counter()->content;
 }
 BAT* BatHandle::get() const{
-	CHECK_EXCEPTION(Exception, shared_ptr != nullptr && counter()->content != nullptr, "Empty handle");
+	CHECK(shared_ptr != nullptr && counter()->content != nullptr, "Empty handle");
 	return counter()->content;
 }
 

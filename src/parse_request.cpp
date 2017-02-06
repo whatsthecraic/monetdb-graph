@@ -6,6 +6,8 @@
  */
 #include "parse_request.hpp"
 
+#include <cstdlib> // getenv
+#include <iostream> // cout
 #include <string>
 
 #include "third-party/tinyxml2.hpp"
@@ -24,7 +26,6 @@ namespace {
 		const char* name; int pos; bool set; bool required;
 		ParseExpectedColumn(const char* name, bool required = true) : name(name), pos(-1), set(false), required(required) {}
 	};
-
 }
 
 static void parse_column(XMLElement* e, string& out_name, int& out_pos){
@@ -140,11 +141,20 @@ static void parse_shortest_path(Query& query, MalStkPtr stackPtr, InstrPtr instr
 
 
 void parse_request(Query& query, MalStkPtr stackPtr, InstrPtr instrPtr) {
-	const char* request = (const char*) getArgReference(stackPtr, instrPtr, instrPtr->retc);
+	const char* request = *((const char**) getArgReference(stackPtr, instrPtr, instrPtr->retc));
 	auto get_arg = [stackPtr, instrPtr](int index) {
 		CHECK(index >= 0 && index < instrPtr->argc, "Invalid argument position: " << index);
+		bat* bb = (bat*) getArgReference(stackPtr, instrPtr, index);
+		cout << "[get_arg] index: " << index << ", value: " << ((bb == nullptr) ? -2 : *bb) << endl;
 		return (bat*) getArgReference(stackPtr, instrPtr, index);
 	};
+
+	{ // print to stdout the request ?
+		char* env_debug = getenv("GRAPH_DUMP_PARSER");
+		if(env_debug != nullptr && (strcmp(env_debug, "1") == 0 || strcmp(env_debug, "true") == 0)){
+			cout << request << endl;;
+		}
+	}
 
 	// default attributes
 	GraphDescriptorType graph_type = e_graph_columns;
@@ -152,7 +162,7 @@ void parse_request(Query& query, MalStkPtr stackPtr, InstrPtr instrPtr) {
 	// parse the request
 	XMLDocument xml_document(true, Whitespace::COLLAPSE_WHITESPACE);
 	XMLError xml_rc = xml_document.Parse(request);
-	CHECK(xml_rc == XML_SUCCESS, "Cannot parse the given text:\n" << request << "\n XML Error " << XMLDocument::ErrorIDToName(xml_rc) << " (" << xml_rc << ")");
+	CHECK(xml_rc == XML_SUCCESS, "Cannot parse the given text:\n" << request << "\n>>XML Error: " << XMLDocument::ErrorIDToName(xml_rc) << " (" << xml_rc << ")");
 	auto xml_root = xml_document.RootElement();
 	CHECK(xml_root != nullptr, "Empty XML document");
 	auto base_node = xml_root->FirstChild();
@@ -177,11 +187,12 @@ void parse_request(Query& query, MalStkPtr stackPtr, InstrPtr instrPtr) {
 		// input columns
 		else if (tag == "input"){
 			enum { cl = 0, cr, src, dst };
-			ParseExpectedColumn columns[] = { {"candidates_left"} , {"candidates_right"}, {"src"}, {"dst"}, {nullptr} };
+			ParseExpectedColumn columns[] = { {"candidates_left"} , {"candidates_right", /*required=*/false}, {"src"}, {"dst"}, {nullptr} };
 			parse_columns(e, columns);
 
 			query.candidates_left = get_arg(columns[cl].pos);
-			query.candidates_right = get_arg(columns[cr].pos);
+			if(columns[cr].set)
+				query.candidates_right = get_arg(columns[cr].pos);
 			query.query_src = get_arg(columns[src].pos);
 			query.query_dst = get_arg(columns[dst].pos);
 		}

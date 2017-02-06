@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 
+#include "debug.h"
 #include "errorhandling.hpp"
 #include "monetdb_config.hpp"
 #include "parse_request.hpp"
@@ -60,98 +61,7 @@ extern "C" {
 
 // Entry point from the MAL layer
 // We have our little API convention with the codegen...
-//str GRAPHspfw(MalBlkPtr mb, MalStkPtr stk, InstrPtr instrPtr) noexcept {
-//	str rc = MAL_SUCCEED;
-//	const char* function_name = "graph.spfw";
-//
-//
-//	// helpers to get & set the the MAL arguments
-//
-//	auto set_arg = [stk, instrPtr](int index, bat value) { stk->stk[instrPtr->argv[index]].val.bval = value; };
-//
-//	try {
-//		Query query;
-//		parse_request(query, stk, instrPtr);
-//		handle_request(query);
-//
-//		//  input = BATdescriptor(*((bat*)getArgReference(stk, p, p->retc)));
-//		int arg_pos = instrPtr->retc;
-//		int spfw_flags = *((int*) getArgReference(stk, instrPtr, instrPtr->argc -1));
-//
-//		// candidates lists
-//		query.candidates_left = BatHandle( get_arg(arg_pos++) );
-//		query.candidates_right = BatHandle(  get_arg(arg_pos++) );
-//
-//		// query src/dst
-//		query.query_src = BatHandle( get_arg(arg_pos++) );
-//		query.query_dst = BatHandle(  get_arg(arg_pos++) );
-//
-//		// graph descriptor
-//		if(spfw_flags & SPFW_GLOBAL_GRAPH_DESCR_COLUMNS){
-//			BatHandle edges_src{get_arg(arg_pos++)};
-//			BatHandle edges_dst{get_arg(arg_pos++)};
-//			query.graph.reset( new GraphDescriptorColumns(move(edges_src), move(edges_dst)) );
-//		} else {
-//			MAL_ERROR(ILLEGAL_ARGUMENT, "Invalid graph type");
-//		}
-//
-//		// parse the shortest paths to execute
-//		int output_index = 2; // 0 = jl, 1 = jr
-//		while(arg_pos < instrPtr->argc -1) {
-//			int flags = *((int*) getArgReference(stk, instrPtr, arg_pos++));
-//			BatHandle weights;
-//			bool compute_path = flags & SPFW_LOCAL_COMPUTE_PATH;
-//
-//			if((flags & SPFW_LOCAL_COMPUTE_BFS) == false){
-//				weights = get_arg(arg_pos++);
-//			}
-//
-//			query.request_shortest_path(move(weights), compute_path, output_index);
-//			output_index++; // cost
-//			if(compute_path) output_index++; // path
-//		}
-//
-//		// execute the query
-//		handle_request(query);
-//
-//		// output
-//		// candidate ids
-//		set_arg(0, query.candidates_left.release_logical()); // jl
-//		set_arg(1, query.candidates_right.release_logical()); // jr
-//		// shortest paths
-//		for(auto& sp : query.shortest_paths){
-//			set_arg(sp.get_pos_output(), sp.computed_cost.release_logical() );
-//			if(sp.compute_path()){
-//				set_arg(sp.get_pos_pathlen() +1, sp.computed_path_lengths.release_logical() );
-//				set_arg(sp.get_pos_pathvalues() +2, sp.computed_path_values.release_logical() );
-//			}
-//		}
-//
-//	} catch(gr8::Exception& e){ // internal exception
-//		if(dynamic_cast<gr8::MalException*>(&e)){
-//			rc = createException(MAL, function_name, ((MalException*) &e)->get_mal_error());
-//		} else {
-//			rc = createException(MAL, function_name, OPERATION_FAILED);
-//		}
-//
-//        cerr << ">> Exception " << e.getExceptionClass() << " raised at " << e.getFile() << ", line: " << e.getLine() << "\n";
-//        cerr << ">> Cause: " << e.what() << "\n";
-//        cerr << ">> Operation failed!" << endl;
-//
-//        goto error;
-//	} catch(std::bad_alloc& b) {
-//		CHECK(0, MAL_MALLOC_FAIL);
-//	} catch(...) { // no exception shall pass
-//		CHECK(0, OPERATION_FAILED); // generic error
-//	}
-//
-//error:
-//	return rc;
-//}
-
-// Entry point from the MAL layer
-// We have our little API convention with the codegen...
-str GRAPHspfw(MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) noexcept {
+str GRAPHspfw(void* cntxt, MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) noexcept {
 	str rc = MAL_SUCCEED;
 	const char* function_name = "graph.spfw";
 
@@ -162,13 +72,23 @@ str GRAPHspfw(MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) noexcept {
 		Query query;
 		parse_request(query, stackPtr, instrPtr);
 
+//		DEBUG_DUMP(query.candidates_left);
+//		DEBUG_DUMP(query.candidates_right);
+//		DEBUG_DUMP(query.query_src);
+//		DEBUG_DUMP(query.query_dst);
+//		DEBUG_DUMP(((GraphDescriptorColumns*) query.graph.get())->edge_src)
+//		DEBUG_DUMP(((GraphDescriptorColumns*) query.graph.get())->edge_dst)
+
 		// execute the query
 		handle_request(query);
 
 		// output
 		// candidate ids
+//		DEBUG_DUMP(query.output_left);
 		set_arg(query.get_pos_output_left(), query.output_left.release_logical()); // jl
-		set_arg(query.get_pos_output_right(), query.output_right.release_logical()); // jr
+		if(query.output_right.initialized()) {
+			set_arg(query.get_pos_output_right(), query.output_right.release_logical()); // jr
+		}
 		// shortest paths
 		for(auto& sp : query.shortest_paths){
 			set_arg(sp.get_pos_output(), sp.computed_cost.release_logical() );
@@ -180,7 +100,7 @@ str GRAPHspfw(MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) noexcept {
 
 	} catch(gr8::Exception& e){ // internal exception
 		if(dynamic_cast<gr8::MalException*>(&e)){
-			rc = createException(MAL, function_name, ((MalException*) &e)->get_mal_error());
+			rc = createException(MAL, function_name, "%s", ((MalException*) &e)->get_mal_error());
 		} else {
 			rc = createException(MAL, function_name, OPERATION_FAILED);
 		}

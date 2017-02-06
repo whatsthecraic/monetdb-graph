@@ -29,14 +29,14 @@ void ShortestPath::initialize(std::size_t capacity){
 	assert(!initialized());
 	if(!bfs()){
 		computed_cost = COLnew(0, TYPE_oid, capacity, TRANSIENT);
-		if(!computed_cost){ RAISE_ERROR("Cannot initialized the array computed_cost with capacity: " << capacity); }
+		if(!computed_cost.initialized()){ RAISE_ERROR("Cannot initialized the array computed_cost with capacity: " << capacity); }
 
 		if(compute_path()){
 			computed_path_lengths = COLnew(0, TYPE_lng, capacity, TRANSIENT);
-			if(!computed_path_lengths){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity); }
+			if(!computed_path_lengths.initialized()){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity); }
 
 			computed_path_values = COLnew(0, TYPE_lng, capacity * 4, TRANSIENT);
-			if(!computed_path_values){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity *4); }
+			if(!computed_path_values.initialized()){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity *4); }
 		}
 	}
 	_initialized = true;
@@ -72,7 +72,8 @@ void ShortestPath::append_path0(const vector<oid>& path, bool reversed){
 }
 
 bool ShortestPath::bfs() const{ // do we need to perform a BFS visit?
-	return ((bool) weights) == false;
+//	return ((bool) weights) == false;
+	return weights.initialized() == false;
 }
 
 bool ShortestPath::compute_path() const {

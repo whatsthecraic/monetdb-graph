@@ -43,7 +43,8 @@ public:
 	~BatHandle();
 
 	// does it contain a BAT?
-	operator bool () const;
+//	operator bool () const; // evil
+	bool initialized() const;
 	bool empty() const;
 	std::size_t size() const;
 
@@ -60,6 +61,7 @@ public:
 		return get()->batCacheid;
 	}
 
+
 	template<typename T>
 	T* array(){
 		return reinterpret_cast<T*>(get()->T.heap.base);
@@ -71,15 +73,18 @@ public:
 	}
 
 	template<typename T>
-	T first() const{
+	T at(size_t i) const{
 		CHECK_EXCEPTION(Exception, !empty(), "The BAT is empty");
-		return array<T>()[0];
+		return array<T>()[i];
+	}
+	template<typename T>
+	T first() const{
+		return at<T>(0);
 	}
 
 	template<typename T>
 	T last() const{
-		CHECK_EXCEPTION(Exception, !empty(), "The BAT is empty");
-		return array<T>()[size()-1];
+		return at<T>(size() -1);
 	}
 };
 

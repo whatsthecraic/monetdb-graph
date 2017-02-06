@@ -9,6 +9,9 @@
 #define DEBUG_H_
 
 #include "monetdb_config.hpp"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // Print the whole content of a BAT to stdout (similar to io.print);
 void _bat_debug0(const char* prefix, BAT* b);
@@ -16,32 +19,27 @@ void _bat_debug0(const char* prefix, BAT* b);
 
 #ifdef __cplusplus
 } /* extern "C" */
-#endif
+
 
 /**
  * In C++ use the single macro DEBUG_DUMP(x) to dump the content of any variable
  */
-#ifdef __cplusplus
 #include <iostream>
+#include "bat_handle.hpp"
+
 template <typename T>
 void _debug_dump0(const char* prefix, T value){
 	std::cout << prefix << ": " << value << std::endl;
 }
-template <>
-void _debug_dump0<BAT*>(const char* prefix, BAT* value){
-	_bat_debug0(prefix, value);
-}
-template <>
-void _debug_dump0<bool>(const char* prefix, bool value){
-	std::cout << prefix << ": " << std::boolalpha << value << std::endl;
-}
 
-template <>
-void _debug_dump0<char*>(const char* prefix, char* value){
-	std::cout << value << std::endl;
-}
+// specializations
+template<> void _debug_dump0<BAT*>(const char* prefix, BAT* value);
+template<> void _debug_dump0<bool>(const char* prefix, bool value);
+template<> void _debug_dump0<char*>(const char* prefix, char* value);
+template<> void _debug_dump0<gr8::BatHandle>(const char* prefix, gr8::BatHandle handle);
 
 #define DEBUG_DUMP(value) _debug_dump0("["#value"]",  value);
-#endif
+
+#endif /* __cplusplus */
 
 #endif /* DEBUG_H_ */

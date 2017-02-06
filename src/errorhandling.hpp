@@ -134,7 +134,7 @@ public:
 
 #define MAL_ERROR(mal_error, message) { RAISE_EXCEPTION_CREATE_ARGS(message); throw gr8::MalException("MalException", what, file, line, function, mal_error); }
 #define MAL_ASSERT(condition, mal_error) if(!(condition)) { MAL_ERROR(mal_error, ""); }
-#define MAL_ASSERT_RC() MAL_ASSERT(rc != MAL_SUCCEED, rc)
+#define MAL_ASSERT_RC() MAL_ASSERT(rc == MAL_SUCCEED, rc)
 #define MAL_ASSERT_MSG(condition, mal_error, message) if(!(condition)) { MAL_ERROR(mal_error, message); }
 
 #endif /* ERRORHANDLING_HPP_ */

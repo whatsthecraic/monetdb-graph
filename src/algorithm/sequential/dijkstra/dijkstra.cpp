@@ -61,6 +61,12 @@ void SequentialDijkstra::execute(Query& query, ShortestPath* sp, bool join_resul
 	} else {
 		auto bat_type = sp->weights.get()->ttype;
 		switch(ATOMtype(bat_type)){
+		case TYPE_bte:
+			execute_dijkstra<bte>(query, sp, join_results);
+			break;
+		case TYPE_sht:
+			execute_dijkstra<sht>(query, sp, join_results);
+			break;
 		case TYPE_int:
 			execute_dijkstra<int>(query, sp, join_results);
 			break;
@@ -71,7 +77,7 @@ void SequentialDijkstra::execute(Query& query, ShortestPath* sp, bool join_resul
 			execute_dijkstra<oid>(query, sp, join_results);
 			break;
 		default:
-			RAISE_ERROR("Type not supported: " << bat_type);
+			RAISE_ERROR("Type not supported: " << (int) bat_type);
 		}
 	}
 

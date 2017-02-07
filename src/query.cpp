@@ -28,14 +28,14 @@ ShortestPath::ShortestPath(Query* q, BatHandle&& weights, int pos_output, int po
 void ShortestPath::initialize(std::size_t capacity){
 	assert(!initialized());
 	if(!bfs()){
-		computed_cost = COLnew(0, TYPE_oid, capacity, TRANSIENT);
+		computed_cost = COLnew(0, weights.type(), capacity, TRANSIENT);
 		if(!computed_cost.initialized()){ RAISE_ERROR("Cannot initialized the array computed_cost with capacity: " << capacity); }
 
 		if(compute_path()){
 			computed_path_lengths = COLnew(0, TYPE_lng, capacity, TRANSIENT);
 			if(!computed_path_lengths.initialized()){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity); }
 
-			computed_path_values = COLnew(0, TYPE_lng, capacity * 4, TRANSIENT);
+			computed_path_values = COLnew(0, TYPE_oid, capacity * 4, TRANSIENT);
 			if(!computed_path_values.initialized()){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity *4); }
 		}
 	}

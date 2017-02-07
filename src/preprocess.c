@@ -50,9 +50,9 @@ GRAPHprefixsum(bat* id_output, const bat* id_input, const lng* ptr_domain_cardin
 	CHECK(ATOMtype(BATttype(input)) == TYPE_oid, ILLEGAL_ARGUMENT);
 	CHECK(BATtordered(input), ILLEGAL_ARGUMENT ": the input column is not sorted");
 
-	// DEBUG ONLY
-	printf("<<graph.prefixsum>>\n"); fflush(stdout);
-	bat_debug(input);
+//	// DEBUG ONLY
+//	printf("<<graph.prefixsum>>\n"); fflush(stdout);
+//	bat_debug(input);
 
 	if(cardinality == 0){ // edge case
 		CHECK(output = COLnew(input->hseqbase /*=0*/, TYPE_oid, 0, TRANSIENT), MAL_MALLOC_FAIL);
@@ -110,7 +110,7 @@ GRAPHprefixsum(bat* id_output, const bat* id_input, const lng* ptr_domain_cardin
 		}
 	}
 
-	bat_debug(output);
+//	bat_debug(output);
 
 success:
 	BBPunfix(input->batCacheid);

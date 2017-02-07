@@ -29,13 +29,27 @@ static void handle_request(Query& query){
 
 	algorithm::sequential::SequentialDijkstra algo;
 
-	// first time, execute join the tuples
-	algo.execute(query, query.shortest_paths.size() > 0 ? &(query.shortest_paths.front()) : nullptr, true);
+	if(query.shortest_paths.empty()){ // do not compute any shortest path
+		algo.execute(query, nullptr, true);
+	} else { // we need to compute a shortest path
+		size_t capacity = 0; // initial capacity of the output columns related to the shortest paths
 
-	// next iterations, only compute a shortest path
-	for(size_t i = 1, sz = query.shortest_paths.size(); i < sz; i++){
-		ShortestPath* sp = &query.shortest_paths[i];
-		algo.execute(query, sp, false);
+		{ // first time, execute join the tuples
+			ShortestPath* sp = &(query.shortest_paths.front());
+			capacity = query.candidates_left.size();
+			if(query.is_join_semantics()) capacity *= query.candidates_right.size();
+			sp->initialize(capacity);
+			algo.execute(query, &(query.shortest_paths.front()), true);
+		}
+
+		capacity = query.shortest_paths.front().computed_cost.size();
+
+		// next iterations, only compute a shortest path
+		for(size_t i = 1, sz = query.shortest_paths.size(); i < sz; i++){
+			ShortestPath* sp = &query.shortest_paths[i];
+			sp->initialize(capacity);
+			algo.execute(query, sp, false);
+		}
 	}
 }
 
@@ -87,10 +101,12 @@ str GRAPHspfw(void* cntxt, MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) 
 //		DEBUG_DUMP(query.output_left);
 		set_arg(query.get_pos_output_left(), query.output_left.release_logical()); // jl
 		if(query.output_right.initialized()) {
+//			DEBUG_DUMP(query.output_right);
 			set_arg(query.get_pos_output_right(), query.output_right.release_logical()); // jr
 		}
 		// shortest paths
 		for(auto& sp : query.shortest_paths){
+//			DEBUG_DUMP(sp.computed_cost);
 			set_arg(sp.get_pos_output(), sp.computed_cost.release_logical() );
 			if(sp.compute_path()){
 				set_arg(sp.get_pos_pathlen(), sp.computed_path_lengths.release_logical() );

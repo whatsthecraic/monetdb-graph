@@ -9,6 +9,7 @@
 #define QUERY_HPP_
 
 #include <cassert>
+//#include <iostream> // debug only
 #include <memory>
 #include <vector>
 
@@ -64,6 +65,7 @@ public:
 
 	template <typename T>
 	void append(T value){
+//		std::cout << "append_value: " <<  value << std::endl; // debug only
 		append_cost0(&value);
 	}
 

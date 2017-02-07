@@ -34,21 +34,27 @@ void reorder_computations(Query& q){
 	        case TYPE_void:
 	            assert(0); // I thought we were done with voids
 	            break;
-	        case TYPE_int:
+	        case TYPE_bte:
 	        	cost += 1;
+	        	break;
+	        case TYPE_sht:
+	        	cost += 1;
+	        	break;
+	        case TYPE_int:
+	        	cost += 3;
 	        	break;
 	        case TYPE_lng:
 	        case TYPE_oid: // <- it should not occur
-	        	cost += 2;
+	        	cost += 4;
 	            break;
 	        case TYPE_flt:
-	        	cost += 3;
+	        	cost += 5;
 	        	break;
 	        case TYPE_dbl:
-	        	cost += 4;
+	        	cost += 6;
 	        	break;
 	        default: // whatever you are
-	        	cost += 5;
+	        	cost += 7;
 	        	break;
 	        }
 		}

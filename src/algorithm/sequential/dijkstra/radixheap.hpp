@@ -30,7 +30,7 @@ namespace radixheap_internal {
 	}
 
 	template<typename T>
-	typename std::enable_if<sizeof(T) < 8 && sizeof(T) != 4, int>::type MSD(T a, T b){
+	typename std::enable_if<(sizeof(T) > 4) && (sizeof(T) < 8), int>::type MSD(T a, T b){
 		return MSD((uint64_t) a, (uint64_t) b);
 	}
 

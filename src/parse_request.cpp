@@ -144,8 +144,8 @@ void parse_request(Query& query, MalStkPtr stackPtr, InstrPtr instrPtr) {
 	const char* request = *((const char**) getArgReference(stackPtr, instrPtr, instrPtr->retc));
 	auto get_arg = [stackPtr, instrPtr](int index) {
 		CHECK(index >= 0 && index < instrPtr->argc, "Invalid argument position: " << index);
-		bat* bb = (bat*) getArgReference(stackPtr, instrPtr, index);
-		cout << "[get_arg] index: " << index << ", value: " << ((bb == nullptr) ? -2 : *bb) << endl;
+//		bat* bb = (bat*) getArgReference(stackPtr, instrPtr, index);
+//		cout << "[get_arg] index: " << index << ", value: " << ((bb == nullptr) ? -2 : *bb) << endl;
 		return (bat*) getArgReference(stackPtr, instrPtr, index);
 	};
 

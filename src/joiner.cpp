@@ -71,7 +71,7 @@ void Joiner::initchg(){
 
 
 void Joiner::join(oid i, oid j){
-	std::cout << "[join] " << i << ", " << j << ", last:" <<  last << std::endl;
+//	std::cout << "[join] " << i << ", " << j << ", last:" <<  last << std::endl;
 
 	assert(!finalized);
 

@@ -86,6 +86,10 @@ public:
 	T last() const{
 		return at<T>(size() -1);
 	}
+
+	int type() const {
+		return ATOMtype(get()->T.type);
+	}
 };
 
 

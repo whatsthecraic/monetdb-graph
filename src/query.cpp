@@ -27,17 +27,15 @@ ShortestPath::ShortestPath(Query* q, BatHandle&& weights, int pos_output, int po
 
 void ShortestPath::initialize(std::size_t capacity){
 	assert(!initialized());
-	if(!bfs()){
-		computed_cost = COLnew(0, weights.type(), capacity, TRANSIENT);
-		if(!computed_cost.initialized()){ RAISE_ERROR("Cannot initialized the array computed_cost with capacity: " << capacity); }
+	computed_cost = COLnew(0, !bfs() ? weights.type() : TYPE_lng /* keep in sync with edge::cost_t */, capacity, TRANSIENT);
+	if(!computed_cost.initialized()){ RAISE_ERROR("Cannot initialized the array computed_cost with capacity: " << capacity); }
 
-		if(compute_path()){
-			computed_path_lengths = COLnew(0, TYPE_lng, capacity, TRANSIENT);
-			if(!computed_path_lengths.initialized()){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity); }
+	if(compute_path()){
+		computed_path_lengths = COLnew(0, TYPE_lng, capacity, TRANSIENT);
+		if(!computed_path_lengths.initialized()){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity); }
 
-			computed_path_values = COLnew(0, TYPE_oid, capacity * 4, TRANSIENT);
-			if(!computed_path_values.initialized()){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity *4); }
-		}
+		computed_path_values = COLnew(0, TYPE_oid, capacity * 4, TRANSIENT);
+		if(!computed_path_values.initialized()){ RAISE_ERROR("Cannot initialized the array computed_path_lengths with capacity: " << capacity *4); }
 	}
 	_initialized = true;
 }
@@ -48,7 +46,6 @@ bool ShortestPath::initialized() const {
 
 void ShortestPath::append_cost0(void* value){
 	assert(initialized());
-	assert(!bfs());
 	BUNappend(computed_cost.get(), value, false);
 }
 

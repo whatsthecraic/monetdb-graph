@@ -121,11 +121,11 @@ str GRAPHspfw(void* cntxt, MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) 
 			rc = createException(MAL, function_name, OPERATION_FAILED);
 		}
 
-        cerr << ">> Exception " << e.getExceptionClass() << " raised at " << e.getFile() << ", line: " << e.getLine() << "\n";
-        cerr << ">> Cause: " << e.what() << "\n";
-        cerr << ">> Operation failed!" << endl;
+		cerr << ">> Exception " << e.getExceptionClass() << " raised at " << e.getFile() << ", line: " << e.getLine() << "\n";
+		cerr << ">> Cause: " << e.what() << "\n";
+		cerr << ">> Operation failed!" << endl;
 
-        goto error;
+		goto error;
 	} catch(std::bad_alloc& b) {
 		CHECK(0, MAL_MALLOC_FAIL);
 	} catch(...) { // no exception shall pass

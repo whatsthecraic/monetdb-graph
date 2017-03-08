@@ -33,6 +33,7 @@ CFLAGS += -DGRAPHinterjoinlist_SORT
 # List of the sources to compile
 sources := \
 	bat_handle.cpp \
+	configuration.cpp \
 	debug.cpp \
 	errorhandling.cpp \
 	graph_descriptor.cpp \

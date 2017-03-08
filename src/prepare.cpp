@@ -88,7 +88,7 @@ str GRAPHprefixsum(bat* id_output, const bat* id_input, const lng* ptr_domain_ca
 // side effect: we need to reorder also the weights in q.shortest_paths
 static GraphDescriptorCompact* to_compact_sequential(Query& q, GraphDescriptorColumns* graph){
 	if(graph->edge_src.empty()){ // edge case
-		return new GraphDescriptorCompact(BatHandle{}, BatHandle{}, 0);
+		return new GraphDescriptorCompact(BatHandle{}, BatHandle{}, BatHandle{}, 0);
 	}
 
 	str rc = MAL_SUCCEED;
@@ -133,8 +133,11 @@ static GraphDescriptorCompact* to_compact_sequential(Query& q, GraphDescriptorCo
 		}
 	}
 
+	// store the permutation array
+	BatHandle edge_id(perm);
+
 	// done
-	return new GraphDescriptorCompact(std::move(edge_src), std::move(edge_dst), (size_t) count);
+	return new GraphDescriptorCompact(std::move(edge_src), std::move(edge_dst), std::move(edge_id), (size_t) count);
 }
 
 void prepare_graph(Query& q){

@@ -34,6 +34,7 @@ private:
 
 	vertex_t* parents;
 	cost_t* distances;
+	vertex_t* edge_ids;
 	const Graph& graph;
 	queue_t queue;
 
@@ -47,6 +48,7 @@ private:
 	void init(vertex_t src) {
 		queue.clear();
 		parents[src] = src;
+		edge_ids[src] = oid_nil;
 		cost_t* __restrict D = distances;
 		for(std::size_t i = 0, sz = graph.size(); i < sz; i++){
 			D[i] = INFINITY;
@@ -72,6 +74,7 @@ private:
 		const auto& G = this->graph;
 		vertex_t* __restrict P = this->parents;
 		cost_t* __restrict D = this->distances;
+		vertex_t* __restrict E = this->edge_ids;
 		queue_t& Q = this->queue;
 
 		while(!Q.empty()){
@@ -87,6 +90,7 @@ private:
 				if(td < D[e.dest()]){
 					D[e.dest()] = td;
 					P[e.dest()] = root.dst;
+					E[e.dest()] = e.id();
 					Q.push({e.dest(), td});
 				}
 			}
@@ -99,6 +103,7 @@ private:
 		const auto& G = this->graph;
 		vertex_t* __restrict P = this->parents;
 		cost_t* __restrict D = this->distances;
+		vertex_t* __restrict E = this->edge_ids;
 		queue_t& Q = this->queue;
 
 		while(!Q.empty()){
@@ -113,6 +118,7 @@ private:
 				if(td < D[e.dest()]){
 					D[e.dest()] = td;
 					P[e.dest()] = root;
+					E[e.dest()] = e.id();
 					Q.push(e.dest());
 				}
 			}
@@ -134,7 +140,7 @@ private:
 
 			if(shortest_path_cb->compute_path()){
 	    		for(vertex_t parent = parents[dst]; parent != src; parent = parents[parent]){
-	    			revpath.push_back(parent);
+	    			revpath.push_back(edge_ids[parent]);
 	    		}
 	    		shortest_path_cb->append(revpath, true);
 	    		revpath.clear();

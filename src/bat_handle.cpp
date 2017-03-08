@@ -149,12 +149,12 @@ BatHandle::~BatHandle(){
 	decref();
 }
 
-bool BatHandle::initialized () const{
+bool BatHandle::initialised () const{
 	return shared_ptr != nullptr && counter()->content != nullptr;
 }
 
 bool BatHandle::empty() const {
-	return !initialized() || size() == 0;
+	return !initialised() || size() == 0;
 }
 
 size_t BatHandle::size() const {

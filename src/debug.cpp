@@ -84,7 +84,7 @@ void _debug_dump0<char*>(const char* prefix, char* value){
 }
 template<>
 void _debug_dump0<gr8::BatHandle>(const char* prefix, gr8::BatHandle handle){
-	if(!handle.initialized()){
+	if(!handle.initialised()){
 		std::cout << prefix << ": <<handle not initialized>>" << std::endl;
 	} else if (handle.empty()){
 		std::cout << prefix << ": <<empty>>" << std::endl;

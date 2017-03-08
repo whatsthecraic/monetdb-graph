@@ -102,7 +102,7 @@ static void parse_shortest_path(Query& query, MalStkPtr stackPtr, InstrPtr instr
 		return (bat*) getArgReference(stackPtr, instrPtr, index);
 	};
 
-	int pos_weights = -1, pos_output = -1, pos_path_len = -1, pos_path_values = -1;
+	int pos_weights = -1, pos_output = -1, pos_path = -1;
 
 	XMLNode* base_node = xml_shortest_path->FirstChild();
 	do {
@@ -116,10 +116,8 @@ static void parse_shortest_path(Query& query, MalStkPtr stackPtr, InstrPtr instr
 				pos_weights = pos;
 			} else if (name == "output"){
 				pos_output = pos;
-			} else if (name == "compute_path_len"){
-				pos_path_len = pos; // pos & pos +1
-			} else if (name == "compute_path_values"){
-				pos_path_values = pos;
+			} else if (name == "compute_path"){
+				pos_path = pos;
 			} else {
 				ERROR("Invalid column: " << name);
 			}
@@ -136,7 +134,7 @@ static void parse_shortest_path(Query& query, MalStkPtr stackPtr, InstrPtr instr
 		weights = get_arg(pos_weights);
 	}
 
-	query.request_shortest_path(move(weights), pos_output, pos_path_len, pos_path_values);
+	query.request_shortest_path(move(weights), pos_output, pos_path);
 }
 
 
@@ -225,15 +223,16 @@ void parse_request(Query& query, MalStkPtr stackPtr, InstrPtr instrPtr) {
 				query.graph.reset( new GraphDescriptorColumns(move(edges_src), move(edges_dst)) );
 			} break;
 			case e_graph_compact: {
-				enum { i_src = 0, i_dst, i_count };
-				ParseExpectedColumn columns[] = { {"src"} , {"dst"}, {"count"}, {nullptr} };
+				enum { i_src = 0, i_dst, i_perm, i_count };
+				ParseExpectedColumn columns[] = { {"src"} , {"dst"}, {"id"}, {"count"}, {nullptr} };
 				parse_columns(e, columns);
 
 				BatHandle edges_src{get_arg(columns[i_src].pos)};
 				BatHandle edges_dst{get_arg(columns[i_dst].pos)};
+				BatHandle edges_id{get_arg(columns[i_perm].pos)};
 				lng* count = (lng*) getArgReference(stackPtr, instrPtr, columns[i_count].pos);
 				CHECK(count != nullptr, "Argument 'count' is null");
-				query.graph.reset( new GraphDescriptorCompact{move(edges_src), move(edges_dst), (size_t) *count});
+				query.graph.reset( new GraphDescriptorCompact{move(edges_src), move(edges_dst), move(edges_id), (size_t) *count});
 			} break;
 			default:
 				ERROR("Invalid graph type: " << graph_type);

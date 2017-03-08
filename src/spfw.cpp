@@ -38,7 +38,7 @@ static void handle_request(Query& query){
 			ShortestPath* sp = &(query.shortest_paths.front());
 			capacity = query.candidates_left.size();
 			if(query.is_join_semantics()) capacity *= query.candidates_right.size();
-			sp->initialize(capacity);
+			sp->initialise(capacity);
 			algo.execute(query, &(query.shortest_paths.front()), true);
 		}
 
@@ -47,7 +47,7 @@ static void handle_request(Query& query){
 		// next iterations, only compute a shortest path
 		for(size_t i = 1, sz = query.shortest_paths.size(); i < sz; i++){
 			ShortestPath* sp = &query.shortest_paths[i];
-			sp->initialize(capacity);
+			sp->initialise(capacity);
 			algo.execute(query, sp, false);
 		}
 	}
@@ -100,7 +100,7 @@ str GRAPHspfw(void* cntxt, MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) 
 		// candidate ids
 //		DEBUG_DUMP(query.output_left);
 		set_arg(query.get_pos_output_left(), query.output_left.release_logical()); // jl
-		if(query.output_right.initialized()) {
+		if(query.output_right.initialised()) {
 //			DEBUG_DUMP(query.output_right);
 			set_arg(query.get_pos_output_right(), query.output_right.release_logical()); // jr
 		}
@@ -109,8 +109,7 @@ str GRAPHspfw(void* cntxt, MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) 
 //			DEBUG_DUMP(sp.computed_cost);
 			set_arg(sp.get_pos_output(), sp.computed_cost.release_logical() );
 			if(sp.compute_path()){
-				set_arg(sp.get_pos_pathlen(), sp.computed_path_lengths.release_logical() );
-				set_arg(sp.get_pos_pathvalues(), sp.computed_path_values.release_logical() );
+				set_arg(sp.get_pos_path(), sp.computed_path.release_logical());
 			}
 		}
 

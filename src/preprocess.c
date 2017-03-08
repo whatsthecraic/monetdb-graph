@@ -145,9 +145,10 @@ GRAPHvoid2oid(bat* id_output, bat* id_input){
 	// otherwise generate a new bat of type oid and copy all values
 	else {
 		size_t output_sz = (size_t) BATcount(input);
+		size_t base = input->T.seq;
 		CHECK(output = COLnew(input->hseqbase /*=0*/, TYPE_oid, output_sz, TRANSIENT), MAL_MALLOC_FAIL);
 		for(size_t i = 0; i < output_sz; i++){
-			((oid*) output->T.heap.base)[i] = i;
+			((oid*) output->T.heap.base)[i] = base + i;
 		}
 		BATsetcount(output, output_sz);
 

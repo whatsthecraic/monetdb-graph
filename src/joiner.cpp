@@ -37,16 +37,16 @@ void Joiner::initchg(){
 
 	// initialize the internal vectors
 	jl = COLnew(query.candidates_left.get()->hseqbase, TYPE_oid, query.candidates_left.size(), TRANSIENT);
-	MAL_ASSERT(jl.initialized(), MAL_MALLOC_FAIL);
+	MAL_ASSERT(jl.initialised(), MAL_MALLOC_FAIL);
 	if(multiple_aggregates){
 		el = COLnew(query.query_src.get()->hseqbase, TYPE_oid, query.query_src.size(), TRANSIENT);
-		MAL_ASSERT(el.initialized(), MAL_MALLOC_FAIL);
+		MAL_ASSERT(el.initialised(), MAL_MALLOC_FAIL);
 		er = COLnew(query.query_dst.get()->hseqbase, TYPE_oid, query.query_dst.size(), TRANSIENT);
-		MAL_ASSERT(er.initialized(), MAL_MALLOC_FAIL);
+		MAL_ASSERT(er.initialised(), MAL_MALLOC_FAIL);
 	}
 	if(is_join_semantics){
 		jr = COLnew(query.candidates_right.get()->hseqbase, TYPE_oid, query.candidates_right.size(), TRANSIENT);
-		MAL_ASSERT(jr.initialized(), MAL_MALLOC_FAIL);
+		MAL_ASSERT(jr.initialised(), MAL_MALLOC_FAIL);
 	} else {
 		// in case of filter semantics, copy the previous tuples
 

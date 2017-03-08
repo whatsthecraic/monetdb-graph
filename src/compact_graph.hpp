@@ -16,11 +16,13 @@ namespace gr8 {
 	private:
 		const vertex_t v;
 		const cost_t  w;
+		const vertex_t edge_id;
 	public:
-		CompactEdge(V dst, W cost) : v(dst), w(cost) { };
+		CompactEdge(V dst, W cost, V id) : v(dst), w(cost), edge_id(id) { };
 
 		vertex_t dest() const { return v; }
 		cost_t cost() const { return w; }
+		vertex_t id() const { return edge_id; }
 	};
 
     template<typename V>
@@ -31,12 +33,14 @@ namespace gr8 {
 
     private:
         const vertex_t v;
+        const vertex_t edge_id;
 
     public:
-        CompactEdge(V dst) : v(dst) { };
+        CompactEdge(V dst, V id) : v(dst), edge_id(id) { };
 
         vertex_t dest() const { return v; }
         cost_t cost() const { return 1; }
+        vertex_t id() const { return edge_id; }
     };
 
     // Graph representation
@@ -53,6 +57,7 @@ namespace gr8 {
 		vertex_t* __restrict vertices;
 		vertex_t* __restrict edges;
 		cost_t* __restrict weights;
+		vertex_t* __restrict edge_ids;
 
 		CompactGraph(const CompactGraph&) = delete;
 		CompactGraph& operator=(CompactGraph&) = delete;
@@ -65,16 +70,17 @@ namespace gr8 {
 		private:
 			vertex_t* __restrict base_edges;
 			cost_t* __restrict base_weights;
+			vertex_t* __restrict base_ids;
 
-			iterator_fwd(V* e, W* w) noexcept : base_edges(e), base_weights(w) { }
+			iterator_fwd(V* e, W* w, V* ids) noexcept : base_edges(e), base_weights(w), base_ids(ids) { }
 
 			V* base() const noexcept { return base_edges; }
 		public:
 			// access the current element
-		    edge_t operator*() const noexcept { return edge_t{*base_edges, *base_weights}; }
+		    edge_t operator*() const noexcept { return edge_t{*base_edges, *base_weights, *base_ids}; }
 
 			// move forward
-		    void operator++() noexcept { ++base_edges; ++base_weights; }
+		    void operator++() noexcept { ++base_edges; ++base_weights; ++base_ids; }
 
 			// whatever the shortcut impl. is using
 			bool operator== (const fwd_t& rhs) const noexcept { return base() == rhs.base(); }
@@ -87,13 +93,14 @@ namespace gr8 {
 			using fwd_t = iterator_fwd<W, dummy>;
 		private:
 			vertex_t* __restrict base_edges;
+			vertex_t* __restrict base_ids;
 
-			iterator_fwd(V* e) noexcept : base_edges(e) { }
+			iterator_fwd(V* e, V* ids) noexcept : base_edges(e), base_ids(ids) { }
 
 			V* base() const noexcept { return base_edges; }
 		public:
 			// access the current element
-		    edge_t operator*() const noexcept { return edge_t{*base_edges}; }
+		    edge_t operator*() const noexcept { return edge_t{*base_edges, *base_ids}; }
 
 			// move forward
 		    void operator++() noexcept { ++base_edges; }
@@ -111,13 +118,14 @@ namespace gr8 {
 		private:
 			V* base_edges;
 			W* base_weights;
+			V* base_ids;
 			V* end_edges;
 
-			iterator_make(V* e, W* w, V* end_edges) noexcept : base_edges(e), base_weights(w), end_edges(end_edges){ }
+			iterator_make(V* e, W* w, V* ids, V* end_edges) noexcept : base_edges(e), base_weights(w), base_ids(ids), end_edges(end_edges){ }
 
 		public:
-			fwd_t begin() noexcept { return fwd_t(base_edges, base_weights); }
-			fwd_t end() const noexcept { return fwd_t(end_edges, NULL); }
+			fwd_t begin() noexcept { return fwd_t(base_edges, base_weights, base_ids); }
+			fwd_t end() const noexcept { return fwd_t(end_edges, nullptr, nullptr); }
 		};
 
 		template<bool dummy>
@@ -127,19 +135,20 @@ namespace gr8 {
 			using fwd_t = iterator_fwd<W, dummy>;
 
 			V* base_edges;
+			V* base_ids;
 			V* end_edges;
 
-			iterator_make(V* e, void*, V* end_edges) noexcept : base_edges(e), end_edges(end_edges){ }
+			iterator_make(V* e, void*, V* ids, V* end_edges) noexcept : base_edges(e), base_ids(ids), end_edges(end_edges){ }
 
 		public:
-			fwd_t begin() noexcept { return fwd_t(base_edges); }
-			const fwd_t end() const noexcept { return fwd_t(end_edges); }
+			fwd_t begin() noexcept { return fwd_t(base_edges, base_ids); }
+			const fwd_t end() const noexcept { return fwd_t(end_edges, base_ids); }
 		};
 
 
 
-		CompactGraph(std::size_t size, vertex_t* vertices, vertex_t* edges, cost_t* weights) noexcept :
-			vertex_count(size), vertices(vertices), edges(edges), weights(weights){
+		CompactGraph(std::size_t size, vertex_t* vertices, vertex_t* edges, cost_t* weights, vertex_t* ids) noexcept :
+			vertex_count(size), vertices(vertices), edges(edges), weights(weights), edge_ids(ids){
 		}
 
 		~CompactGraph() noexcept { /* nop */ }
@@ -158,7 +167,7 @@ namespace gr8 {
 			assert(vertex_id < size());
 
 			std::size_t offset = vertex_id == 0 ? 0 : vertices[vertex_id -1];
-			return iterator_make<W>(edges + offset, weights + offset, edges + vertices[vertex_id]);
+			return iterator_make<W>(edges + offset, weights + offset, edge_ids + offset, edges + vertices[vertex_id]);
 		}
 
 	};

@@ -42,8 +42,8 @@ GraphDescriptorType GraphDescriptorColumns::get_type() const {
  *                                                                            *
  ******************************************************************************/
 
-GraphDescriptorCompact::GraphDescriptorCompact(BatHandle&& edge_src, BatHandle&& edge_dst, std::size_t vertex_count) :
-		edge_src(move(edge_src)), edge_dst(move(edge_dst)), vertex_count(vertex_count) { }
+GraphDescriptorCompact::GraphDescriptorCompact(BatHandle&& edge_src, BatHandle&& edge_dst, BatHandle&& edge_id, std::size_t vertex_count) :
+		edge_src(move(edge_src)), edge_dst(move(edge_dst)), edge_id(move(edge_id)), vertex_count(vertex_count) { }
 
 GraphDescriptorCompact::~GraphDescriptorCompact() { }
 

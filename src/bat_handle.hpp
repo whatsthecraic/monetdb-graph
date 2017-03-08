@@ -44,7 +44,7 @@ public:
 
 	// does it contain a BAT?
 //	operator bool () const; // evil
-	bool initialized() const;
+	bool initialised() const;
 	bool empty() const;
 	std::size_t size() const;
 

@@ -33,12 +33,11 @@ private:
 	friend class Query;
 
 	Query* _query;
-	bool _initialized;
+	bool _initialised;
 	int _pos_output;
-	int _pos_pathlen;
-	int _pos_pathvalues;
+	int _pos_path;
 
-	ShortestPath(Query* q, BatHandle&& weights, int pos_output, int pos_pathlen, int pos_pathvalues);
+	ShortestPath(Query* q, BatHandle&& weights, int pos_output, int pos_path);
 
 	void append_cost0(void* value);
 	void append_path0(const std::vector<oid>& path, bool reversed);
@@ -46,11 +45,10 @@ private:
 public:
 	BatHandle weights;
 	BatHandle computed_cost;
-	BatHandle computed_path_lengths;
-	BatHandle computed_path_values;
+	BatHandle computed_path;
 
-	void initialize(std::size_t capacity);
-	bool initialized() const;
+	void initialise(std::size_t capacity);
+	bool initialised() const;
 
 	// do we need to perform a BFS visit?
 	bool bfs() const;
@@ -59,9 +57,7 @@ public:
 	bool compute_path() const;
 
 	int get_pos_output() const;
-	int get_pos_pathlen() const;
-	int get_pos_pathvalues() const;
-
+	int get_pos_path() const;
 
 	template <typename T>
 	void append(T value){
@@ -119,7 +115,7 @@ public:
 		return query_src.empty();
 	}
 
-	void request_shortest_path(BatHandle&& weights, int pos_output, int pos_pathlen, int pos_pathvalues);
+	void request_shortest_path(BatHandle&& weights, int pos_output, int pos_path);
 
 	oid qsrc(std::size_t index) const{
 		return query_src.array<oid>()[index];

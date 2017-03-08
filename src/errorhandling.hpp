@@ -126,7 +126,6 @@ public:
 		int line, const std::string& function, const char* mal_message) : \
 				Exception(exceptionClass, message, file, line, function), mal_message(mal_message) { }
 
-
 	const char* get_mal_error(){ return mal_message; }
 };
 

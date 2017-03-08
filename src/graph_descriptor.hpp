@@ -47,9 +47,10 @@ class GraphDescriptorCompact : public GraphDescriptor {
 public:
 	BatHandle edge_src;
 	BatHandle edge_dst;
+	BatHandle edge_id;
 	std::size_t vertex_count;
 
-	GraphDescriptorCompact(BatHandle&& edge_src, BatHandle&& edge_dst, std::size_t vertex_count);
+	GraphDescriptorCompact(BatHandle&& edge_src, BatHandle&& edge_dst, BatHandle&& edge_id, std::size_t vertex_count);
 	~GraphDescriptorCompact();
 
 	GraphDescriptorType get_type() const;
@@ -58,7 +59,7 @@ public:
 		typedef std::shared_ptr<CompactGraph<oid>> pointer_t;
 
 		// std::size_t size, vertex_t* vertices, vertex_t* edges, cost_t* weights
-		return pointer_t { new CompactGraph<oid>(vertex_count, edge_src.array<oid>(), edge_dst.array<oid>(), nullptr) };
+		return pointer_t { new CompactGraph<oid>(vertex_count, edge_src.array<oid>(), edge_dst.array<oid>(), nullptr, edge_id.array<oid>()) };
 	}
 
 	template <typename W>
@@ -66,7 +67,7 @@ public:
 		typedef std::shared_ptr<CompactGraph<oid, W>> pointer_t;
 
 		// std::size_t size, vertex_t* vertices, vertex_t* edges, cost_t* weights
-		return pointer_t { new CompactGraph<oid, W>(vertex_count, edge_src.array<oid>(), edge_dst.array<oid>(), weights.array<W>()) };
+		return pointer_t { new CompactGraph<oid, W>(vertex_count, edge_src.array<oid>(), edge_dst.array<oid>(), weights.array<W>(), edge_id.array<oid>()) };
 	}
 
 };

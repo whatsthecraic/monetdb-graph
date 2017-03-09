@@ -131,7 +131,7 @@ GRAPHvoid2oid(bat* id_output, bat* id_input){
 	const char* function_name = "graph.void2oid";
 	str rc = MAL_SUCCEED;
 	BAT *input = NULL, *output = NULL;
-	*id_output = bat_nil;
+//	*id_output = bat_nil; // suble bug: GRAPHvoid2oid might be invoked with the same args for input/output
 
 	input = BATdescriptor(*id_input);
 	CHECK(input != NULL, RUNTIME_OBJECT_MISSING);
@@ -240,13 +240,23 @@ GRAPHinterjoinlist(bat* out_candidates, bat* out_edge_src, bat* out_edge_dst,
 	oid* __restrict right_dst = NULL; // dst edges
 	size_t i = 0, j = 0, left_sz = 0, right_sz = 0, min_sz = 0;
 
+/* Macro to acquire a BAT* from a bat */
+#define BATACQUIRE(variable, batptr) \
+    variable = BATdescriptor(*batptr); \
+	CHECK(variable != NULL, RUNTIME_OBJECT_MISSING); \
+	CHECK(ATOMtype(BATttype(variable)) == TYPE_oid, ILLEGAL_ARGUMENT);
+/* End of the macro def */
+
 	// acquire the input candidates
-	a = BATdescriptor(*in_a);
-	CHECK(a != NULL, RUNTIME_OBJECT_MISSING);
-	CHECK(ATOMtype(BATttype(a)) == TYPE_oid, ILLEGAL_ARGUMENT);
-	b = BATdescriptor(*in_b);
-	CHECK(b != NULL, RUNTIME_OBJECT_MISSING);
-	CHECK(ATOMtype(BATttype(b)) == TYPE_oid, ILLEGAL_ARGUMENT);
+	BATACQUIRE(a, in_a);
+	BATACQUIRE(b, in_b);
+
+#if !defined(NDEBUG) // DEBUG ONLY: just to check codegen is not messing up with us
+	BATACQUIRE(c, in_c);
+	BBPunfix(c->batCacheid); c = NULL;
+	BATACQUIRE(d, in_d);
+	BBPunfix(d->batCacheid); d = NULL;
+#endif // DEBUG ONLY
 
 #if defined(GRAPHinterjoinlist_SORT)
 	// sort the inputs (if they are not already sorted)
@@ -282,12 +292,8 @@ GRAPHinterjoinlist(bat* out_candidates, bat* out_edge_src, bat* out_edge_dst,
 #endif
 
 	// acquire the input edges
-	c = BATdescriptor(*in_c);
-	CHECK(c != NULL, RUNTIME_OBJECT_MISSING);
-	CHECK(ATOMtype(BATttype(c)) == TYPE_oid, ILLEGAL_ARGUMENT);
-	d = BATdescriptor(*in_d);
-	CHECK(d != NULL, RUNTIME_OBJECT_MISSING);
-	CHECK(ATOMtype(BATttype(d)) == TYPE_oid, ILLEGAL_ARGUMENT);
+	BATACQUIRE(c, in_c);
+	BATACQUIRE(d, in_d);
 
 	left = (oid*) a->T.heap.base;
 	right = (oid*) b->T.heap.base;
@@ -323,6 +329,8 @@ GRAPHinterjoinlist(bat* out_candidates, bat* out_edge_src, bat* out_edge_dst,
 			}
 		}
 	} // else we are done!
+
+#undef BATACQUIRE
 
 //success:
 	// use the materialized columns as output

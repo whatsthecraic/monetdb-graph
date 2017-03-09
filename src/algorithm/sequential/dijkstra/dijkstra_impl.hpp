@@ -259,7 +259,7 @@ private:
 
 public:
 	SequentialDijkstraImpl(const Graph& graph, ShortestPath* sp) :
-		parents(new vertex_t[graph.size()]), distances(new cost_t[graph.size()]),
+		parents(new vertex_t[graph.size()]), distances(new cost_t[graph.size()]), edge_ids(new vertex_t[graph.size()]),
 		graph(graph), queue(), shortest_path_cb(sp), joiner(nullptr) {
 
 	}
@@ -267,6 +267,7 @@ public:
 	~SequentialDijkstraImpl(){
 		delete[] parents;
 		delete[] distances;
+		delete[] edge_ids;
 	}
 
 	// Connect only

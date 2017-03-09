@@ -8,6 +8,7 @@
 #include "configuration.hpp"
 
 #include <cstring>
+#include <iostream>
 
 #include "errorhandling.hpp"
 #include "monetdb_config.hpp"
@@ -42,4 +43,25 @@ void Configuration::initialise(){
 Configuration& Configuration::configuration(){
 	CHECK(instance.initialised(), "Configuration not initialised");
 	return instance;
+}
+
+
+// entry point for monetdb
+extern "C" { // initialise the global configuration
+str GRAPHprelude(void*){
+	try {
+		Configuration::initialise();
+	} catch (gr8::Exception& e){ // no exception shall pass!
+		std::cerr << ">> Exception " << e.getExceptionClass() << " raised at " << e.getFile() << ", line: " << e.getLine() << "\n";
+		std::cerr << ">> Cause: " << e.what() << "\n";
+		std::cerr << ">> Caught at: " << __FUNCTION__ << "\n";
+		std::cerr << ">> Operation failed!" << std::endl;
+
+		return createException(MAL, "GRAPHprelude", e.what());
+	} catch (...){
+		return createException(MAL, "GRAPHprelude", OPERATION_FAILED);
+	}
+
+	return MAL_SUCCEED;
+}
 }

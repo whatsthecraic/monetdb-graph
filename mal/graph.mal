@@ -2,7 +2,6 @@
 # ln -s graph.mal <monetdb>/lib/monetdb5
 module graph;
 
-
 ###############################################################################
 #                                                                             #
 # Preprocessing                                                               #
@@ -104,3 +103,15 @@ comment "Shortest path operator";
 #  
 #  return (part_from, part_to);
 #end scatter;
+
+
+###############################################################################
+#                                                                             #
+# Initialisation                                                              #
+#                                                                             #
+###############################################################################
+command prelude() (:str)
+address GRAPHprelude
+comment "Initialise the global configuration of the graph module"; 
+
+graph.prelude();

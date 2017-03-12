@@ -103,7 +103,7 @@ namespace gr8 {
 		    edge_t operator*() const noexcept { return edge_t{*base_edges, *base_ids}; }
 
 			// move forward
-		    void operator++() noexcept { ++base_edges; }
+		    void operator++() noexcept { ++base_edges; ++base_ids; }
 
 			// whatever the shortcut impl. is using
 			bool operator== (const fwd_t& rhs) const noexcept { return base() == rhs.base(); }

@@ -5,6 +5,7 @@
  *      Author: Dean De Leo
  */
 #include "debug.h"
+#include "configuration.hpp"
 
 using namespace std;
 
@@ -35,6 +36,32 @@ void _bat_debug_T<void>(BAT* b){
     cout << "id: " << b->batCacheid << ", hseqbase: " << b->hseqbase << ", count: " << BATcount(b) << ", TYPE_void, start of the sequence: " << b->T.seq << "\n";
 }
 
+static void _bat_debug_nested_table(BAT* b){
+	var_t* A = reinterpret_cast<var_t*>(b->theap.base);
+	const size_t A_sz = BATcount(b);
+
+	cout << "id: " << b->batCacheid << ", hseqbase: " << b->hseqbase << ", count: " << A_sz << ", TYPE_nested_table\n";
+	if(b->T.vheap == nullptr){
+		cout << "--> vheap not allocated!\n";
+		return;
+	}
+	char* H = b->T.vheap->base;
+	for(size_t i = 0; i < A_sz; i++){
+		var_t pos = A[i] << GDK_VARSHIFT;
+		oid* entry = reinterpret_cast<oid*>(H + pos);
+		size_t entry_count = *entry;
+		cout << "[" << i << "] " << entry_count << " values: ";
+		entry++;
+		for(size_t j = 0; j < entry_count; j++){
+			if(j>0){ cout << ", "; }
+			cout << entry[j];
+		}
+		cout << '\n';
+	}
+
+
+}
+
 
 extern "C" { // disable name mangling
 
@@ -59,6 +86,15 @@ void _bat_debug0(const char* prefix, BAT* b){
             _bat_debug_T<oid>(b);
             break;
         default:
+        	// nested table ?
+        	if(gr8::configuration().initialised()){
+        		int nt_type = gr8::configuration().type_nested_table();
+        		if(b->ttype == nt_type){
+        			_bat_debug_nested_table(b);
+        			return;
+        		}
+        	}
+
             cout << "Type not handled (" << b->ttype << ")\n";
         }
     }

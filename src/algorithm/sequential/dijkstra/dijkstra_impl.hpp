@@ -126,31 +126,6 @@ private:
 	}
 
 	/**
-	 * @return true if src is connected to dst, false otherwise
-	 */
-	bool finish(vertex_t src, vertex_t dst, std::size_t i, std::size_t j){
-		// did we reach the destination?
-		if(distances[dst] == INFINITY) return false; // no, we didn't
-
-		if(joiner)
-			joiner->join(i, j);
-
-		if(shortest_path_cb){
-			shortest_path_cb->append(distances[dst]);
-
-			if(shortest_path_cb->compute_path()){
-	    		for(vertex_t parent = parents[dst]; parent != src; parent = parents[parent]){
-	    			revpath.push_back(edge_ids[parent]);
-	    		}
-	    		shortest_path_cb->append(revpath, true);
-	    		revpath.clear();
-			}
-		}
-
-		return true;
-	}
-
-	/**
 	 * @return true if src[i] is connected to dst[j], false otherwise
 	 */
 	bool finish(Query& q, std::size_t i, std::size_t j){
@@ -168,11 +143,14 @@ private:
 			shortest_path_cb->append(distances[dst]);
 
 			if(shortest_path_cb->compute_path()){
-	    		for(vertex_t parent = parents[dst]; parent != src; parent = parents[parent]){
-	    			revpath.push_back(parent);
-	    		}
-	    		shortest_path_cb->append(revpath, true);
-	    		revpath.clear();
+				vertex_t current = dst;
+				while(current != src){
+					//std::cout << "[" << src << ":" << dst << "] current: " << current << ", append: " << edge_ids[current] << std::endl;
+					revpath.push_back(edge_ids[current]);
+					current = parents[current];
+				}
+				shortest_path_cb->append(revpath, true);
+				revpath.clear();
 			}
 		}
 

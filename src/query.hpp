@@ -34,10 +34,10 @@ private:
 
 	Query* _query;
 	bool _initialised;
-	int _pos_output;
-	int _pos_path;
+	int _pos_output_cost;
+	int _pos_output_path;
 
-	ShortestPath(Query* q, BatHandle&& weights, int pos_output, int pos_path);
+	ShortestPath(Query* q, BatHandle&& weights, int pos_output_cost, int pos_output_path);
 
 	void append_cost0(void* value);
 	void append_path0(const std::vector<oid>& path, bool reversed);
@@ -56,7 +56,7 @@ public:
 	// do we need to report the path ?
 	bool compute_path() const;
 
-	int get_pos_output() const;
+	int get_pos_cost() const;
 	int get_pos_path() const;
 
 	template <typename T>

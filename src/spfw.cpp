@@ -22,7 +22,6 @@ using namespace std;
  *                                                                            *
  ******************************************************************************/
 
-
 static void handle_request(Query& query){
 	reorder_computations(query);
 	prepare_graph(query);
@@ -107,8 +106,9 @@ str GRAPHspfw(void* cntxt, MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr) 
 		// shortest paths
 		for(auto& sp : query.shortest_paths){
 //			DEBUG_DUMP(sp.computed_cost);
-			set_arg(sp.get_pos_output(), sp.computed_cost.release_logical() );
+			set_arg(sp.get_pos_cost(), sp.computed_cost.release_logical() );
 			if(sp.compute_path()){
+//				DEBUG_DUMP(sp.computed_path);
 				set_arg(sp.get_pos_path(), sp.computed_path.release_logical());
 			}
 		}

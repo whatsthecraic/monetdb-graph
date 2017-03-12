@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "debug.h"
+
 namespace gr8 {
 
 /******************************************************************************
@@ -135,6 +137,10 @@ static GraphDescriptorCompact* to_compact_sequential(Query& q, GraphDescriptorCo
 
 	// store the permutation array
 	BatHandle edge_id(perm);
+
+//	DEBUG_DUMP(edge_src);
+//	DEBUG_DUMP(edge_dst);
+//	DEBUG_DUMP(edge_id);
 
 	// done
 	return new GraphDescriptorCompact(std::move(edge_src), std::move(edge_dst), std::move(edge_id), (size_t) count);

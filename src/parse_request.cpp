@@ -102,7 +102,7 @@ static void parse_shortest_path(Query& query, MalStkPtr stackPtr, InstrPtr instr
 		return (bat*) getArgReference(stackPtr, instrPtr, index);
 	};
 
-	int pos_weights = -1, pos_output = -1, pos_path = -1;
+	int pos_in_weights = -1, pos_out_cost = -1, pos_out_path = -1;
 
 	XMLNode* base_node = xml_shortest_path->FirstChild();
 	do {
@@ -112,12 +112,12 @@ static void parse_shortest_path(Query& query, MalStkPtr stackPtr, InstrPtr instr
 		if(tag == "column"){
 			string name; int pos;
 			parse_column(e, name, pos);
-			if(name == "weights"){
-				pos_weights = pos;
-			} else if (name == "output"){
-				pos_output = pos;
-			} else if (name == "compute_path"){
-				pos_path = pos;
+			if(name == "in_weights"){
+				pos_in_weights = pos;
+			} else if (name == "out_cost"){
+				pos_out_cost = pos;
+			} else if (name == "out_path"){
+				pos_out_path = pos;
 			} else {
 				ERROR("Invalid column: " << name);
 			}
@@ -126,15 +126,14 @@ static void parse_shortest_path(Query& query, MalStkPtr stackPtr, InstrPtr instr
 		}
 	} while ( (base_node = base_node->NextSibling()) != nullptr );
 
-	CHECK(pos_output != -1, "Missing required column 'output'");
+	CHECK(pos_out_cost != -1, "Missing required column 'output'");
 
 	BatHandle weights;
-
-	if(pos_weights != -1){
-		weights = get_arg(pos_weights);
+	if(pos_in_weights != -1){
+		weights = get_arg(pos_in_weights);
 	}
 
-	query.request_shortest_path(move(weights), pos_output, pos_path);
+	query.request_shortest_path(move(weights), pos_out_cost, pos_out_path);
 }
 
 

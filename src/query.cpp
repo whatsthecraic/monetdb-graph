@@ -25,7 +25,7 @@ using namespace std;
  ******************************************************************************/
 
 ShortestPath::ShortestPath(Query* q, BatHandle&& weights, int pos_output, int pos_path) :
-	_query(q), _initialised(false), _pos_output(pos_output), _pos_path(pos_path), weights(move(weights)) {
+	_query(q), _initialised(false), _pos_output_cost(pos_output), _pos_output_path(pos_path), weights(move(weights)) {
 
 }
 
@@ -63,8 +63,15 @@ void ShortestPath::append_cost0(void* value){
 
 void ShortestPath::append_path0(const vector<oid>& path, bool reversed){
 	assert(initialised());
-	assert(!bfs() && compute_path());
+	assert(compute_path());
 	BAT* output = computed_path.get();
+
+//	// debug only
+//	cout << "[append_path] size: " << path.size() << "; values: ";
+//	for(oid o: path){
+//		cout << o << " ";
+//	}
+//	cout << "\n";
 
 	// append to the vheap
 	Heap* vheap = output->T.vheap;
@@ -107,16 +114,16 @@ bool ShortestPath::bfs() const{ // do we need to perform a BFS visit?
 }
 
 bool ShortestPath::compute_path() const {
-	return _pos_path != -1;
+	return _pos_output_path != -1;
 }
 
-int ShortestPath::get_pos_output() const {
-	return _pos_output;
+int ShortestPath::get_pos_cost() const {
+	return _pos_output_cost;
 }
 
 int ShortestPath::get_pos_path() const {
 	CHECK_EXCEPTION(Exception, compute_path(), "Path not required");
-	return _pos_path;
+	return _pos_output_path;
 }
 
 /******************************************************************************

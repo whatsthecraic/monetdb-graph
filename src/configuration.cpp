@@ -45,7 +45,6 @@ Configuration& Configuration::configuration(){
 	return instance;
 }
 
-
 // entry point for monetdb
 extern "C" { // initialise the global configuration
 str GRAPHprelude(void*){
@@ -64,4 +63,4 @@ str GRAPHprelude(void*){
 
 	return MAL_SUCCEED;
 }
-}
+} // extern "C"

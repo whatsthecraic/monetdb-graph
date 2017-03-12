@@ -20,13 +20,13 @@ private:
 	bool _initialised; // has the singleton instance been initialised?
 	int _type_nested_table; // reference to the physical type representing a nested table
 
-	bool initialised() const {
-		return _initialised;
-	}
-
 public:
 	bool dump_parser() const {
 		return _dump_parser;
+	}
+
+	bool initialised() const {
+		return _initialised;
 	}
 
 	int type_nested_table() const{

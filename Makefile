@@ -11,7 +11,12 @@
 monetdbpath := $(shell if which mserver5 2>/dev/null 1>&2; then dirname $$(dirname $$(which mserver5)); fi)
 # otherwise try the default path
 ifeq (${monetdbpath},)
-monetdbpath := ${HOME}/workspace/monetdb/build/debug/
+monetdbpath := ${HOME}/workspace/monetdb/build/default
+monetdbpath := $(shell if [ -d "$(monetdbpath)" ]; then echo "$(monetdbpath)"; fi)
+endif
+# as above, with a debug build
+ifeq (${monetdbpath},)
+monetdbpath := ${HOME}/workspace/monetdb/build/debug
 monetdbpath := $(shell if [ -d "$(monetdbpath)" ]; then echo "$(monetdbpath)"; fi)
 endif
 ifeq (${monetdbpath},)

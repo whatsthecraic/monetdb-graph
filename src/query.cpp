@@ -163,5 +163,11 @@ int Query::get_pos_output_right() const {
 void Query::set_pos_output_right(int value){
 	_pos_output_right = value;
 }
+void Query::set_output_empty(){
+	output_left = COLnew(0, TYPE_oid, 0, TRANSIENT);
+	MAL_ASSERT(output_left.initialised(), MAL_MALLOC_FAIL);
+	output_right = COLnew(0, TYPE_oid, 0, TRANSIENT);
+	MAL_ASSERT(output_right.initialised(), MAL_MALLOC_FAIL);
+}
 
 

@@ -132,6 +132,9 @@ public:
 	void set_pos_output_left(int value);
 	int get_pos_output_right() const;
 	void set_pos_output_right(int value);
+
+	// initialise all output vectors as empty
+	void set_output_empty();
 };
 
 

@@ -35,6 +35,11 @@ GraphDescriptorType GraphDescriptorColumns::get_type() const {
 	return e_graph_columns;
 }
 
+bool GraphDescriptorColumns::empty() const {
+	assert(edge_src.empty() == edge_dst.empty());
+	return edge_src.empty();
+}
+
 
 /******************************************************************************
  *                                                                            *
@@ -51,3 +56,7 @@ GraphDescriptorType GraphDescriptorCompact::get_type() const {
 	return e_graph_compact;
 }
 
+bool GraphDescriptorCompact::empty() const {
+	assert(edge_src.empty() == edge_dst.empty());
+	return edge_src.empty();
+}

@@ -23,6 +23,13 @@ using namespace std;
  ******************************************************************************/
 
 static void handle_request(Query& query){
+	if(query.candidates_left.empty() || (query.is_join_semantics() && query.candidates_right.empty()) || // empty query ?
+			query.graph->empty() ){ // empty graphs
+		query.set_output_empty();
+		for(ShortestPath& sp : query.shortest_paths) { sp.initialise(0); }
+		return;
+	}
+
 	reorder_computations(query);
 	prepare_graph(query);
 

@@ -28,6 +28,7 @@ public:
 	virtual ~GraphDescriptor();
 
 	virtual GraphDescriptorType get_type() const = 0;
+	virtual bool empty() const = 0;
 };
 
 // Entry class from MonetDB codegen
@@ -40,6 +41,7 @@ public:
 	~GraphDescriptorColumns();
 
 	GraphDescriptorType get_type() const;
+	bool empty() const;
 };
 
 // Compact representation
@@ -54,6 +56,7 @@ public:
 	~GraphDescriptorCompact();
 
 	GraphDescriptorType get_type() const;
+	bool empty() const;
 
 	std::shared_ptr<CompactGraph<oid>> instantiate() {
 		typedef std::shared_ptr<CompactGraph<oid>> pointer_t;

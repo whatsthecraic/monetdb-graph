@@ -26,8 +26,9 @@ endif
 # Compiler & linker settings
 includedir := ${monetdbpath}/include/monetdb/
 libdir := ${monetdbpath}/lib/
-#common_flags := -O0 -g -Wall -fPIC -I${includedir} -Isrc/
-common_flags := -O3 -fPIC -I${includedir} -Isrc/
+common_flags := -O0 -g -Wall -fPIC -I${includedir} -Isrc/
+#-fsanitize=address
+#common_flags := -O3 -fPIC -I${includedir} -Isrc/
 CFLAGS := ${common_flags}
 CXXFLAGS := -std=c++11 ${common_flags}
 LDFLAGS := -L${libdir} -lmonetdb5

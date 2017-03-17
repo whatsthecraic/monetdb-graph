@@ -25,6 +25,7 @@ extern "C" {
 // Defined in <mal_interpreter.h>
 ptr getArgReference(MalStkPtr stk, InstrPtr pci, int k);
 
+
 #ifdef __cplusplus
 } /* extern "C" */
 

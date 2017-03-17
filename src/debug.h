@@ -17,9 +17,20 @@ extern "C" {
 void _bat_debug0(const char* prefix, BAT* b);
 #define bat_debug(b) _bat_debug0("["#b"]",  b);
 
+
+void _debug_bat_state0(const char* prefix, bat* id);
+#define dump_bat_state(bid) _debug_bat_state0("["#bid"]",  bid);
+void _debug_BAT_state0(const char* prefix, BAT* b);
+#define dump_BAT_state(b) _debug_BAT_state0("["#b"]",  b);
+
+void dump_bat_arguments(MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr);
+
 #ifdef __cplusplus
 } /* extern "C" */
 
+// C++ overloads for dump_bat_state(bid)
+inline void _debug_bat_state0(const char* prefix, bat id){ _debug_bat_state0(prefix, &id); }
+inline void _debug_bat_state0(const char* prefix, BAT* bat){ _debug_BAT_state0(prefix, bat); }
 
 /**
  * In C++ use the single macro DEBUG_DUMP(x) to dump the content of any variable

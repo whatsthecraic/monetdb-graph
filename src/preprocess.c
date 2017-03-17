@@ -354,6 +354,7 @@ GRAPHinterjoinlist(bat* out_candidates, bat* out_edge_src, bat* out_edge_dst,
 		BBPunfix(b->batCacheid);
 		BBPunfix(c->batCacheid);
 		BBPunfix(d->batCacheid);
+
 	} else { // no changes, keep the same input
 		*out_candidates = a->batCacheid;
 		BBPkeepref(a->batCacheid);

@@ -128,3 +128,114 @@ void _debug_dump0<gr8::BatHandle>(const char* prefix, gr8::BatHandle handle){
 		_debug_dump0<BAT*>(prefix, handle.get());
 	}
 }
+
+extern "C" { // disable signature mangling
+
+void dump_bat_arguments(MalBlkPtr mb, MalStkPtr stackPtr, InstrPtr instrPtr){
+
+	// from mal_type.h
+	//#define newBatType(T)  (1<<16 |  (T & 0377) )
+	//#define getBatType(X)  ((X) & 0377 )
+	//#define isaBatType(X)   ((1<<16) & (X) && (X)!= TYPE_any)
+	auto getBatType0 = [](int type){ return (type & 0377); };
+	auto isBatType0 = [](int type){ return (((1<<16) & (type)) && (type) != TYPE_any); };
+
+	cout << "[ debug_dump_bat_arguments ]\n";
+	for(int i = 0; i < instrPtr->argc; i++){
+		int arg_id = instrPtr->argv[i];
+		ValRecord& record = stackPtr->stk[arg_id];
+		int type = mb->var[arg_id].type;
+
+		cout << "[" << i << "] " << arg_id << ": ";
+
+		// type
+		if(isBatType0(type)){ // this is a bat?
+			int batType = getBatType0(type);
+			cout << "formal type: BAT[" << ATOMname(batType) << "] (" << batType << ");";
+
+			if(record.vtype == TYPE_bat){
+				bat bat_id = record.val.bval;
+				cout << " BAT id: " << bat_id << ";";
+				if(bat_id != 0){
+					BAT* bat = BBP_cache(bat_id);
+					if(bat == NULL){
+						cout << " <<NULL BAT>>;";
+					} else {
+						cout << " nme: " << ((BBP_logical(bat_id) != nullptr) ? BBP_logical(bat_id) : "<NULL>") << ";";
+						cout << " role: " << (int) bat->S.role << "; ";
+						cout << " refs: " << BBP_refs(bat_id) << "; lrefs: " << BBP_lrefs(bat_id) << "; ";
+						cout << " count: " << bat->batCount << "; ";
+						cout << " Theap=[" << HEAPmemsize(&bat->theap) << ","<< HEAPvmsize(&bat->theap) << "];";
+						cout << " Tvheap=[" << HEAPmemsize(bat->tvheap) << ","<< HEAPvmsize(bat->tvheap) << "];";
+					}
+				}
+
+
+			} else {
+				cout << " vtype != bat: " << record.vtype << ";";
+			}
+		} else if (type == TYPE_any) {
+			cout << "formal type: TYPE_any (" << type << ");";
+		} else {
+			cout << "formal type: " << ATOMname(type) << " (" << type << "); ";
+		}
+
+		cout << endl;
+	}
+}
+
+} // extern "C"
+
+
+/******************************************************************************
+ *                                                                            *
+ *  BAT properties                                                            *
+ *                                                                            *
+ ******************************************************************************/
+
+static void dump_bat_state0(BAT* bat){
+	if(bat == nullptr){
+		cout << " <<NULL BAT>" << endl;
+		return;
+	}
+	auto bat_id = bat->batCacheid;
+	cout << " bat id: " << bat_id << ";";
+	cout << " nme: " << ((BBP_logical(bat_id) != nullptr) ? BBP_logical(bat_id) : "<NULL>") << ";";
+	cout << " role: " << (int) bat->S.role << "; ";
+	cout << " refs: " << BBP_refs(bat_id) << "; lrefs: " << BBP_lrefs(bat_id) << "; ";
+	cout << " count: " << bat->batCount << "; ";
+	cout << " Theap=[" << HEAPmemsize(&bat->theap) << ","<< HEAPvmsize(&bat->theap) << "];";
+	cout << " Tvheap=[" << HEAPmemsize(bat->tvheap) << ","<< HEAPvmsize(bat->tvheap) << "];";
+	cout << endl;
+}
+
+static void dump_bat_state0(bat id){
+	BAT* batptr = BBP_cache(id);
+	if(batptr){
+		dump_bat_state0(batptr);
+	} else {
+		cout << " id: " << id << " <<NULL BAT>>" << endl;
+	}
+}
+
+static void dump_bat_state0(bat* id){
+	if(id == nullptr){
+		cout << " <<NULL ID Pointer>>" << endl;
+	} else {
+		dump_bat_state0(*id);
+	}
+}
+
+extern "C" {
+void _debug_bat_state0(const char* prefix, bat* id){
+	cout << prefix;
+	dump_bat_state0(id);
+}
+
+void __debug_BAT_state0(const char* prefix, BAT* bat){
+	cout << prefix;
+	dump_bat_state0(bat);
+}
+
+} // extern "C"
+

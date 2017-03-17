@@ -122,6 +122,7 @@ static GraphDescriptorCompact* to_compact_sequential(Query& q, GraphDescriptorCo
 	lng count = (lng) max_value +1;
 	input = edge_src.id();
 	rc = GRAPHprefixsum(&output, &input, &count);
+	BBPrelease(input); input = -1; // release the logical reference to the sorted edges
 	MAL_ASSERT_RC();
 	edge_src = BatHandle(&output);
 
@@ -137,6 +138,11 @@ static GraphDescriptorCompact* to_compact_sequential(Query& q, GraphDescriptorCo
 
 	// store the permutation array
 	BatHandle edge_id(perm);
+
+	// release the logical references
+	BBPrelease(edge_src.id());
+	BBPrelease(edge_dst.id());
+	BBPrelease(edge_id.id());
 
 //	DEBUG_DUMP(edge_src);
 //	DEBUG_DUMP(edge_dst);

@@ -32,6 +32,14 @@ CFLAGS := ${common_flags}
 CXXFLAGS := -std=c++11 ${common_flags}
 LDFLAGS := -L${libdir} -lmonetdb5
 
+# In case of clang, emit extra debug info for the C++ objects
+ifneq ($(findstring -g, $(CXXFLAGS)),)
+CXXNAME := $(shell ${CXX} --version | head -n1 | awk '{print $$1 }')
+ifeq (${CXXNAME},clang)
+	CXXFLAGS += -fno-limit-debug-info
+endif
+endif
+
 # Configuration flag, set GRAPHinterjoinlist_SORT to sort the input candidates inside the function
 # graph.intersect_join_lists. If unset, the codegen must ensure that the candidates are already sorted
 CFLAGS += -DGRAPHinterjoinlist_SORT

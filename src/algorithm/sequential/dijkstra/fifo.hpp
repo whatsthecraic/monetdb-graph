@@ -35,11 +35,11 @@ namespace fifo_internal {
 template<typename vertex_t, typename distance_t = void>
 class FIFO{
 public:
-    using value = typename fifo_internal::value<vertex_t, distance_t>::value_t;
+    using value_t = typename fifo_internal::value<vertex_t, distance_t>::value_t;
 private:
     static constexpr std::size_t INITIAL_CAPACITY = 1024; // arbitrary value
 
-    value* queue;
+    value_t* queue;
     std::size_t startpos;
     std::size_t endpos;
     std::size_t capacity;
@@ -49,9 +49,10 @@ private:
         assert(endpos == startpos);
 
         // copy the content of the old container
-        value* queue_cpy = new value[capacity*2];
-        memcpy(queue_cpy, queue + startpos, (capacity - startpos) * sizeof(value));
-        memcpy(queue_cpy, queue, startpos * sizeof(value));
+        value_t* queue_cpy = new value_t[capacity*2];
+        auto first_chunk_length = capacity - startpos;
+        memcpy(queue_cpy, queue + startpos, first_chunk_length * sizeof(value_t));
+        memcpy(queue_cpy + first_chunk_length, queue, startpos * sizeof(value_t));
 
         // update the internal indices
         startpos = 0;
@@ -64,14 +65,14 @@ private:
     }
 
 public:
-    FIFO() : queue(new value[INITIAL_CAPACITY]), startpos(0), endpos(0), capacity(INITIAL_CAPACITY) { }
+    FIFO() : queue(new value_t[INITIAL_CAPACITY]), startpos(0), endpos(0), capacity(INITIAL_CAPACITY) { }
 
     ~FIFO(){
         delete[] queue;
     }
 
 
-    value front(){
+    value_t front(){
         assert(!empty());
         return queue[startpos];
     }
@@ -81,7 +82,7 @@ public:
         startpos = (startpos +1) % capacity;
     }
 
-    void push(value v){
+    void push(value_t v){
         queue[endpos] = v;
         endpos = (endpos +1) % capacity;
         if(endpos == startpos){ // relloc

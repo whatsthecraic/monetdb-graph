@@ -40,7 +40,7 @@ void reorder_computations(Query& q){
 	        	cost += 1;
 	        	break;
 	        case TYPE_sht:
-	        	cost += 1;
+	        	cost += 2;
 	        	break;
 	        case TYPE_int:
 	        	cost += 3;
@@ -49,14 +49,19 @@ void reorder_computations(Query& q){
 	        case TYPE_oid: // <- it should not occur
 	        	cost += 4;
 	            break;
-	        case TYPE_flt:
+#ifdef HAVE_HGE
+	        case TYPE_hge: // 128 bit integers
 	        	cost += 5;
 	        	break;
-	        case TYPE_dbl:
+#endif
+	        case TYPE_flt:
 	        	cost += 6;
 	        	break;
-	        default: // whatever you are
+	        case TYPE_dbl:
 	        	cost += 7;
+	        	break;
+	        default: // whatever you are
+	        	cost += 8;
 	        	break;
 	        }
 		}

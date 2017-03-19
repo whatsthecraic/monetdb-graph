@@ -73,6 +73,11 @@ void SequentialDijkstra::execute(Query& query, ShortestPath* sp, bool join_resul
 		case TYPE_lng:
 			execute_dijkstra<lng>(query, sp, join_results);
 			break;
+//#ifdef HAVE_HGE /* 128-bit integer, it seems a little bit excessive */
+//		case TYPE_hge:
+//			execute_dijkstra<hge>(query, sp, join_results);
+//			break;
+//#endif
 		case TYPE_oid:
 			execute_dijkstra<oid>(query, sp, join_results);
 			break;

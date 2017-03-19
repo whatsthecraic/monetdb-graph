@@ -216,25 +216,6 @@ private:
 		}
 	}
 
-//	void join(query_t& q){
-//		std::size_t size_last_batch = 0;
-//
-//		// perform the cross product
-//		for(std::size_t i = 0; i < q.size_left(); i++){
-//			// This is a small optimisation: if we have two consecutive sources, do not repeat the
-//			// computation of Dijkstra, just duplicate the result of the previous batch
-//			bool compute_dijkstra = (i == 0) || (q.source(i-1) != q.source(i));
-//
-//			if(compute_dijkstra){
-//				// compute the shortest path
-//				size_last_batch = ssmd(q, i, 0, q.size_right() -1);
-//			} else {
-//				q.duplicate_tail(size_last_batch);
-//			}
-//		}
-//	}
-
-
 public:
 	SequentialDijkstraImpl(const Graph& graph, ShortestPath* sp) :
 		parents(new vertex_t[graph.size()]), distances(new cost_t[graph.size()]), edge_ids(new vertex_t[graph.size()]),

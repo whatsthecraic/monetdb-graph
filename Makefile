@@ -26,9 +26,10 @@ endif
 # Compiler & linker settings
 includedir := ${monetdbpath}/include/monetdb/
 libdir := ${monetdbpath}/lib/
-common_flags := -O0 -g -Wall -fPIC -I${includedir} -Isrc/
+#common_flags := -O0 -g -Wall -fPIC -I${includedir} -Isrc/
 #-fsanitize=address
-#common_flags := -O3 -fPIC -I${includedir} -Isrc/
+# Remember to use --disable-assert in MonetDB when using -DNDEBUG
+common_flags := -O3 -fPIC -DNDEBUG -march=native -fomit-frame-pointer -I${includedir} -Isrc/
 CFLAGS := ${common_flags}
 CXXFLAGS := -std=c++11 ${common_flags}
 LDFLAGS := -L${libdir} -lmonetdb5
@@ -37,7 +38,7 @@ LDFLAGS := -L${libdir} -lmonetdb5
 ifneq ($(findstring -g, $(CXXFLAGS)),)
 CXXNAME := $(shell ${CXX} --version | head -n1 | awk '{print $$1 }')
 ifeq (${CXXNAME},clang)
-	CXXFLAGS += -fno-limit-debug-info
+CXXFLAGS += -fno-limit-debug-info
 endif
 endif
 

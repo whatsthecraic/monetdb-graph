@@ -31,6 +31,13 @@ struct QueueDijkstra<vertex_t, distance_t, typename std::enable_if<std::is_integ
 	using type = RadixHeap<vertex_t, distance_t>;
 };
 
+// HGE, need a proper fix
+//#if defined(__SIZEOF_INT128__)
+//template<typename vertex_t>
+//struct QueueDijkstra<vertex_t, __int128>{
+//	using type = RadixHeap<vertex_t, __int128>;
+//};
+//#endif
 
 }}} // namespace gr8::algorithm::sequential
 

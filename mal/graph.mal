@@ -38,11 +38,11 @@ comment "Given the four bats with equal cardinality, it removes the tuples that 
 #                                                                             #
 ###############################################################################
 # What's the difference between :bat[:any] and :bat[:any_1] ?
-#pattern slicer(:bat[:any]) : any...
-pattern slicer(:bat[:any]) (:bat[:any])
+#pattern slicer(:bat[:any_1]) : any...
+pattern slicer(:bat[:any_1]) (:bat[:any_1])
 address GRAPHslicer
 comment "Split the input BAT into multiple bats of roughly equal size";
-pattern slicer(:bat[:any]) (:bat[:any], :bat[:any])
+pattern slicer(:bat[:any_1]) (:bat[:any_1], :bat[:any_1])
 address GRAPHslicer
 comment "Split the input BAT into multiple bats of roughly equal size";
 pattern slicer(:bat[:any]) (:bat[:any], :bat[:any], :bat[:any])

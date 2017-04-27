@@ -24,48 +24,17 @@ using namespace gr8;
 
 /******************************************************************************
  *                                                                            *
- *  Internal counter                                                          *
+ *  Internal content                                                          *
  *                                                                            *
  ******************************************************************************/
-
-namespace {
-	struct Counter {
-	public:
-		BAT* content;
-		std::atomic_int counter;
-
-		Counter(BAT* content = nullptr) : content(content), counter(1) { }
-
-		~Counter() { release(); }
-
-		bat release(bool logical = false){
-			assert(counter >= 0);
-
-			bat id = -1;
-			if(content) {
-				id = content->batCacheid;
-				if(logical){
-					BBPkeepref(id);
-				} else {
-					BBPunfix(id);
-				}
-			}
-			content = nullptr;
-
-			return id;
-		}
-
-		void incref() {
-			assert(counter >= 0);
-			counter++;
-		}
-
-		int decref() {
-			assert(counter >= 1);
-			return --counter;
-		}
-	};
-
+BatHandle::content_t::content_t(BAT* handle): handle(handle), ref_logical(false) { }
+BatHandle::content_t::~content_t(){
+	if(!handle) return;
+	if(ref_logical){
+		BBPkeepref(handle->batCacheid);
+	} else {
+		BBPunfix(handle->batCacheid);
+	}
 }
 
 
@@ -74,27 +43,24 @@ namespace {
  *  BatHandle                                                                 *
  *                                                                            *
  ******************************************************************************/
+BatHandle::BatHandle() : shared_ptr(){ }
+BatHandle::~BatHandle(){ }
 
-#define counter() reinterpret_cast<Counter*>(shared_ptr)
-#define incref() counter()->incref()
-
-BatHandle::BatHandle() : shared_ptr(new Counter()){ }
-
-BatHandle::BatHandle(BAT* b, bool allow_null) : shared_ptr(new Counter()){
+BatHandle::BatHandle(BAT* b, bool allow_null) : shared_ptr(){
 	initialize(b, allow_null);
 }
 
-BatHandle::BatHandle(bat* b, bool allow_null) : shared_ptr(new Counter()){
+BatHandle::BatHandle(bat* b, bool allow_null) : shared_ptr(){
 	initialize(b, allow_null);
 }
 
-BatHandle::BatHandle(bat b, bool allow_null) : shared_ptr(new Counter()){
+BatHandle::BatHandle(bat b, bool allow_null) : shared_ptr(){
 	initialize(b, allow_null);
 }
 
 void BatHandle::initialize(BAT* b, bool allow_null) {
 	MAL_ASSERT(allow_null || b != nullptr, RUNTIME_OBJECT_MISSING);
-	counter()->content = b;
+	shared_ptr.reset(new content_t(b));
 
 }
 void BatHandle::initialize(bat* bat_id, bool allow_null){
@@ -111,46 +77,28 @@ void BatHandle::initialize(bat bat_id, bool allow_null){
 	if(allow_null && bat_id == -1){
 		initialize((BAT*) nullptr, allow_null);
 	} else {
-		auto content = BATdescriptor(bat_id);
-		if(content == nullptr){ // to ease debugging
-			MAL_ASSERT_MSG(false, RUNTIME_OBJECT_MISSING, "Invalid bat id: " << bat_id);
-		}
-		counter()->content = content;
-	}
-}
-
-void BatHandle::decref(){
-	if(shared_ptr) {
-		auto value = counter()->decref();
-		assert(value >= 0);
-		if(value == 0){
-			delete counter(); shared_ptr = nullptr;
-		}
+		initialize(BATdescriptor(bat_id), allow_null);
 	}
 }
 
 BatHandle::BatHandle(const BatHandle& h) : shared_ptr(h.shared_ptr){
-	incref();
+
 }
+
 BatHandle& BatHandle::operator= (const BatHandle& h) {
-	decref();
 	shared_ptr = h.shared_ptr;
-	incref();
 	return *this;
 }
+
 BatHandle& BatHandle::operator= (BatHandle&& h){
-	decref();
 	shared_ptr = h.shared_ptr;
 	h.shared_ptr = nullptr;
 	return *this;
 }
 
-BatHandle::~BatHandle(){
-	decref();
-}
 
 bool BatHandle::initialised () const{
-	return shared_ptr != nullptr && counter()->content != nullptr;
+	return shared_ptr.get() != nullptr && shared_ptr->handle != nullptr;
 }
 
 bool BatHandle::empty() const {
@@ -161,15 +109,11 @@ size_t BatHandle::size() const {
 	return (size_t) BATcount(get());
 }
 
-BAT* BatHandle::get(){
-	CHECK(shared_ptr != nullptr && counter()->content != nullptr, "Empty handle");
-	return counter()->content;
-}
-BAT* BatHandle::get() const{
-	CHECK(shared_ptr != nullptr && counter()->content != nullptr, "Empty handle");
-	return counter()->content;
-}
-
-bat BatHandle::release(bool logical){
-	return counter()->release(logical);
+bat BatHandle::release(bool value){
+	if(shared_ptr.get() != nullptr){
+		shared_ptr->ref_logical = value;
+		return shared_ptr->handle->batCacheid;
+	} else {
+		return -1;
+	}
 }

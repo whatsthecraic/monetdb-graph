@@ -8,6 +8,7 @@
 #ifndef BAT_HANDLE_HPP_
 #define BAT_HANDLE_HPP_
 
+#include <memory>
 #include <stdexcept>
 
 #include "errorhandling.hpp"
@@ -18,7 +19,16 @@ namespace gr8  {
 // Shared pointer to a MonetDB BAT
 class BatHandle {
 private:
-	void* shared_ptr;
+	struct content_t{
+		BAT* handle;
+		bool ref_logical;
+
+		content_t(BAT* handle);
+		~content_t();
+	};
+
+	using shared_ptr_t = std::shared_ptr<content_t>;
+	shared_ptr_t shared_ptr;
 
 	void initialize(bat bat_id, bool allow_null);
 	void initialize(bat* bat_id, bool allow_null);
@@ -45,20 +55,40 @@ public:
 	// does it contain a BAT?
 //	operator bool () const; // evil
 	bool initialised() const;
+
+	/**
+	 * Check whether the underlying BAT is empty
+	 */
 	bool empty() const;
+
+	/**
+	 * Retrieve the number of elements in the underlying BAT
+	 */
 	std::size_t size() const;
 
-	// ask to release the BAT (shared among all pointers)
+	// Set the mode to release the underlying BAT
 	bat release(bool logical);
-	bat release_logical(){ return release(true); }
-	void release_physical(){ release(false); }
+	bat release_physical() { return release(false); }
+	bat release_logical() { return release(true); }
 
 	// retrieve the held BAT
-	BAT* get();
-	BAT* get() const;
+	BAT* get() const {
+		if(!initialised()) { RAISE_ERROR("Empty BatHandle");  }
+		return shared_ptr->handle;
+	}
+	BAT* get_no_except() const {
+		if(!initialised()) return nullptr;
+		return shared_ptr->handle;
+	}
 
+	/*
+	 * Retrieve the internal ID of the underlying BAT
+	 */
 	bat id() const {
 		return get()->batCacheid;
+	}
+	bat id_no_except() const {
+		return shared_ptr.get() ? shared_ptr->handle->batCacheid : -1;
 	}
 
 

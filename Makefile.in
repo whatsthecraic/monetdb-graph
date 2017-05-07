@@ -6,45 +6,18 @@
 # ln -s mal/autoload.mal <monetdb_build>/lib/monetdb5/autoload/50_graph.mal
 #
 
-# build path for monetdb
-# try to search for the binary
-monetdbpath := $(shell if which mserver5 2>/dev/null 1>&2; then dirname $$(dirname $$(which mserver5)); fi)
-# otherwise try the default path
-ifeq (${monetdbpath},)
-monetdbpath := ${HOME}/workspace/monetdb/build/default
-monetdbpath := $(shell if [ -d "$(monetdbpath)" ]; then echo "$(monetdbpath)"; fi)
-endif
-# as above, with a debug build
-ifeq (${monetdbpath},)
-monetdbpath := ${HOME}/workspace/monetdb/build/debug
-monetdbpath := $(shell if [ -d "$(monetdbpath)" ]; then echo "$(monetdbpath)"; fi)
-endif
-ifeq (${monetdbpath},)
-$(error Cannot find the build path of MonetDB)
-endif
+# Current position
+srcdir := @srcdir@
+VPATH := @srcdir@
+top_srcdir := @top_srcdir@
 
-# Compiler & linker settings
-includedir := ${monetdbpath}/include/monetdb/
-libdir := ${monetdbpath}/lib/
-#common_flags := -O0 -g -Wall -fPIC -I${includedir} -Isrc/
-#-fsanitize=address
-# Remember to use --disable-assert in MonetDB when using -DNDEBUG
-common_flags := -O3 -fPIC -DNDEBUG -march=native -fomit-frame-pointer -I${includedir} -Isrc/
-CFLAGS := ${common_flags}
-CXXFLAGS := -std=c++11 ${common_flags}
-LDFLAGS := -L${libdir} -lmonetdb5
+# Compiler settings
+include @top_builddir@/common.mk
 
-# In case of clang, emit extra debug info for the C++ objects
-ifneq ($(findstring -g, $(CXXFLAGS)),)
-CXXNAME := $(shell ${CXX} --version | head -n1 | awk '{print $$1 }')
-ifeq (${CXXNAME},clang)
-CXXFLAGS += -fno-limit-debug-info
-endif
-endif
-
+# FIXME: temporary flag
 # Configuration flag, set GRAPHinterjoinlist_SORT to sort the input candidates inside the function
 # graph.intersect_join_lists. If unset, the codegen must ensure that the candidates are already sorted
-CFLAGS += -DGRAPHinterjoinlist_SORT
+ALL_CFLAGS += -DGRAPHinterjoinlist_SORT
 
 # List of the sources to compile
 sources := \
@@ -66,20 +39,16 @@ sources := \
 # Name of the produces library
 library := libgraph.so
 
-# Build directory
-builddir := build
-
 # Helper variables
-makedepend_c = @$(CC) -MM $(CPPFLAGS) $(CFLAGS) -MP -MT $@ -MF $(basename $@).d $<
-makedepend_cxx = @$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) -MP -MT $@ -MF $(basename $@).d $<
-objectdir := ${builddir}/objects
+makedepend_c = @$(CC) -MM $(ALL_CFLAGS) -MP -MT $@ -MF $(basename $@).d $<
+makedepend_cxx = @$(CXX) -MM $(ALL_CXXFLAGS) -MP -MT $@ -MF $(basename $@).d $<
 objectdirs := $(patsubst %./, %, $(sort $(addprefix ${objectdir}/, $(dir ${sources}))))
 objects_c := $(addprefix ${objectdir}/, $(patsubst %.c, %.o, $(filter %.c, ${sources})))
 objects_cxx := $(addprefix ${objectdir}/, $(patsubst %.cpp, %.o, $(filter %.cpp, ${sources})))
 objects := ${objects_c} ${objects_cxx}
 
 .DEFAULT_GOAL = all
-.PHONY = all clean
+.PHONY: all clean
 
 all: ${builddir}/${library}
 
@@ -97,14 +66,14 @@ ${builddir}/${library} : ${objects} | ${builddir}
 # Objects from C files
 ${objects_c} : ${objectdir}/%.o : src/%.c | ${objectdirs}
 	${makedepend_c}
-	${CC} -c ${CPPFLAGS} ${CFLAGS} $< -o $@
+	${CC} -c ${ALL_CFLAGS} $< -o $@
 
 # Objects from C++ files
 ${objects_cxx} : ${objectdir}/%.o : src/%.cpp | ${objectdirs}
 	${makedepend_cxx}
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -c $(ALL_CXXFLAGS) $< -o $@
 
-# Create the build directory
+# Create the build directories
 ${builddir} ${objectdirs}:
 	mkdir -pv $@
 
@@ -113,4 +82,32 @@ ${builddir} ${objectdirs}:
 
 # Explicit rule, remove the current build
 clean:
-	rm -rf ${builddir}
+	rm -rf ${builddir}/${library}
+	rm -rf ${builddir}/${objectdir}
+	
+#############################################################################
+# Installation
+.PHONY: install install_dev uninstall
+
+install_libdir := ${DESTDIR}${MONETDB_LIBDIR}/monetdb5
+install_autoloaddir := ${install_libdir}/autoload
+
+install: ${builddir}/${library}
+	${INSTALL} -d ${install_libdir}
+	${INSTALL_DATA} ${builddir}/${library} ${install_libdir}/lib_graph.so
+	${INSTALL_DATA} ${srcdir}/mal/graph.mal ${install_libdir}
+	${INSTALL} -d ${install_autoloaddir}
+	${INSTALL_DATA} ${srcdir}/mal/autoload.mal ${install_autoloaddir}/50_graph.mal
+	
+# Similar to `install', but use symbolic links instead. It makes more convenient
+# when developing the library to not have to reinstall everytime.
+install_dev: ${builddir}/${library}
+	@mkdir -pv ${install_libdir} ${install_autoloaddir}
+	ln -s @abs_top_builddir@/${library} ${install_libdir}/lib_graph.so
+	ln -s @abs_top_srcdir@/mal/graph.mal ${install_libdir}
+	ln -s @abs_top_srcdir@/mal/autoload.mal ${install_autoloaddir}/50_graph.mal
+	
+uninstall:
+	rm -f ${install_libdir}/lib_graph.so
+	rm -f ${install_libdir}
+	rm -f ${install_autoloaddir}/50_graph.mal

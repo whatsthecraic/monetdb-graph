@@ -1,0 +1,38 @@
+# Common variables expanded by autoconf
+
+# builddir: whether to build the final artifacts
+builddir := .
+# objectdir: container of the objects
+objectdir := objects
+
+# MonetDB dependencies
+MONETDB_PREFIX := @MONETDB_PREFIX@
+MONETDB_INCLUDEDIR := @MONETDB_INCLUDEDIR@
+MONETDB_LIBDIR := @MONETDB_LIBDIR@
+MONETDB_INCLUDES := @MONETDB_INCLUDES@
+MONETDB_LIBS := @MONETDB_LIBS@
+
+# Compiler programs & flags
+# !!! It assumes that ${top_srcdir} has been defined in the container file !!!
+CC := @CC@
+CXX := @CXX@
+CPPFLAGS := @CPPFLAGS@ 
+EXTRA_CPPFLAGS := @EXTRA_CPPFLAGS@ # extra flags defined by autoconf, similar to AM_CPPFLAGS
+SRC_CPPFLAGS := -I@top_srcdir@/src
+ALL_CPPFLAGS := ${CPPFLAGS} ${EXTRA_CPPFLAGS} ${SRC_CPPFLAGS}
+CFLAGS := @CFLAGS@
+EXTRA_CFLAGS := @EXTRA_CFLAGS@ # extra flags defined by autoconf, similar to AM_CFLAGS
+ALL_CFLAGS := ${ALL_CPPFLAGS} ${MONETDB_INCLUDES} ${EXTRA_CFLAGS} ${CFLAGS}
+CXXFLAGS := @CXXFLAGS@
+EXTRA_CXXFLAGS := @EXTRA_CXXFLAGS@ # extra flags defined by autoconf, similar to AM_CXXFLAGS
+ALL_CXXFLAGS := ${ALL_CPPFLAGS} ${MONETDB_INCLUDES} ${EXTRA_CXXFLAGS} ${CXXFLAGS}
+
+# Linker
+LIBS := @LIBS@
+LDFLAGS := ${LIBS} ${MONETDB_LIBS}
+
+# install script
+INSTALL := @INSTALL@
+INSTALL_PROGRAM := @INSTALL_PROGRAM@
+INSTALL_SCRIPT := @INSTALL_SCRIPT@
+INSTALL_DATA := @INSTALL_DATA@

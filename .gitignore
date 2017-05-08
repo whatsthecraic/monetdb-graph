@@ -9,7 +9,11 @@
 /Debug/
 /Release/
 
-# Makefile build
+# Komodo editor, project files
+/*.komodoproject
+
+# Makefile build. No special meaning per se, but it is customary to create an
+# actual build inside this folder
 /build
 
 # Autoconf

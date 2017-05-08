@@ -89,7 +89,7 @@ clean:
 # Installation
 .PHONY: install install_dev uninstall
 
-install_libdir := ${DESTDIR}${MONETDB_LIBDIR}/monetdb5
+install_libdir := ${DESTDIR}${libdir}/monetdb5
 install_autoloaddir := ${install_libdir}/autoload
 
 install: ${builddir}/${library}
@@ -109,5 +109,5 @@ install_dev: ${builddir}/${library}
 	
 uninstall:
 	rm -f ${install_libdir}/lib_graph.so
-	rm -f ${install_libdir}
+	rm -f ${install_libdir}/graph.mal
 	rm -f ${install_autoloaddir}/50_graph.mal

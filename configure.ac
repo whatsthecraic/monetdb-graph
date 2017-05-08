@@ -14,6 +14,20 @@ AC_CONFIG_FILES([common.mk])
 AC_CONFIG_FILES([Makefile])
 
 #############################################################################
+# Default prefix
+m4_divert_push([DEFAULTS])
+# Similar to AC_PREFIX_PROGRAM(PROGRAM), but avoid to print anything to output
+ac_prefix_program=$(which mserver5 2>/dev/null)
+if test -n "$ac_prefix_program"; then
+    prefix=`AS_DIRNAME(["$ac_prefix_program"])`
+    prefix=`AS_DIRNAME(["$prefix"])`
+    AC_PREFIX_DEFAULT([[$prefix]])
+    # prefix implies setting the variable MONETDB
+    MONETDB="${prefix}"
+fi
+m4_divert_pop([DEFAULTS])
+
+#############################################################################
 # Set the compiler $CC and $CXX. Prefer clang over gcc
 CFLAGS=${CFLAGS:+""}; CXXFLAGS=${CXXFLAGS:+""}; dnl Do not automatically set -g -O2
 AC_PROG_CC([clang gcc icc cc])
@@ -39,7 +53,7 @@ AS_VAR_APPEND([[EXTRA_CFLAGS]], [[" -fPIC"]])
 AS_VAR_APPEND([[EXTRA_CXXFLAGS]], [[" -fPIC"]])
 
 #############################################################################
-# MonetDB installation path. Set the variables MONETDB_PREFIX
+# MonetDB dependencies. Set the variables MONETDB_PREFIX
 # MONETDB_INCLUDEDIR, MONETDB_LIBDIR and MONETDB_INCLUDES
 # First check whether the user was so polite to provide the actual path
 AC_ARG_VAR([MONETDB], [The base path where MonetDB has been installed])
@@ -54,11 +68,11 @@ if (test -n "${MONETDB}"); then
         else
              AC_MSG_ERROR([[invalid path specified for the variable \${MONETDB}: `${MONETDB}'. The path is a regular file and it is not pointing to MonetDB server]])
         fi
-    elif ( test "x$(basename("${MONETDB}"))" = "x${ac_pkg_config_name}.pc" ); then
+    elif ( test "x"$(basename "${MONETDB}") = "x${ac_pkg_config_name}.pc" ); then
         ac_monetdb_pkgconfig_dir=`AS_DIRNAME([["${MONETDB}"]])`
     elif test -d "${MONETDB}"; then # this is a directory
         # is this the bindir ?
-        ac_monetdb_basename=$(basename("${MONETDB}"))
+        ac_monetdb_basename=$(basename "${MONETDB}")
         if ( test -f "${MONETDB}/mserver5" && test -x "${MONETDB}/mserver5" ); then
             ac_monetdb_bindir="${MONETDB}"
             ac_monetdb_prefix=`AS_DIRNAME([["${ac_monetdb_bindir}"]])`
@@ -279,3 +293,9 @@ all
 install
 - install everything
 --------------------------------------------------"
+
+#############################################################################
+# Give a warning if ${prefix} and ${MONETDB_PREFIX} do not agree
+if test x"${prefix}" != x"${MONETDB_PREFIX}"; then
+    AC_MSG_WARN([the installation prefix is different from the MonetDB install path. Prefix: ${prefix}, MonetDB install path: ${MONETDB_PREFIX}. If this is not what you want, run `configure' without specifying the variable MONETDB: configure --prefix=<install_path>]);
+fi

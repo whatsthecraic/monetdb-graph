@@ -12,6 +12,11 @@ MONETDB_LIBDIR := @MONETDB_LIBDIR@
 MONETDB_INCLUDES := @MONETDB_INCLUDES@
 MONETDB_LIBS := @MONETDB_LIBS@
 
+# Installation paths
+prefix := @prefix@
+exec_prefix := @exec_prefix@
+libdir := @libdir@
+
 # Compiler programs & flags
 # !!! It assumes that ${top_srcdir} has been defined in the container file !!!
 CC := @CC@

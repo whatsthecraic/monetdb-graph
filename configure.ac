@@ -121,23 +121,16 @@ if (test -z "${ac_monetdb_pkgconfig_found}"); then
     fi
 fi
 # Retrieve the configuration of MonetDB from pkg-config
-MONETDB_PKGCFG_VAR([prefix]) dnl yields MONETDB_PREFIX
-MONETDB_PKGCFG_VAR([includedir], [[for MonetDB headers]]) dnl yields MONETDB_INCLUDEDIR
-MONETDB_PKGCFG_VAR([libdir], [[for MonetDB libraries]]) dnl yiedls MONETDB_LIBDIR
-MONETDB_INCLUDES=$(pkg-config --cflags-only-I "${ac_pkg_config_name}")
-MONETDB_LIBS=$(pkg-config --libs "${ac_pkg_config_name}")
+PKG_PROG_PKG_CONFIG
+MONETDB_PKGCONFIG_VARIABLE([prefix], [MONETDB_PREFIX])
+MONETDB_PKGCONFIG_VARIABLE([includedir], [MONETDB_INCLUDEDIR], [[for MonetDB headers]])
+MONETDB_PKGCONFIG_VARIABLE([libdir], [MONETDB_LIBDIR], [[for MonetDB libraries]])
+MONETDB_PKGCONFIG_OPTION([cflags-only-I], [MONETDB_INCLUDES])
+MONETDB_PKGCONFIG_OPTION([libs], [MONETDB_LIBS])
 
 # Reset PKG_CONFIG_PATH
 export PKG_CONFIG_PATH="${ac_monetdb_pkgconfig_old}"
 unset ac_monetdb_pkgconfig_old
-
-#############################################################################
-# MonetDB output variables
-AC_SUBST([MONETDB_PREFIX])
-AC_SUBST([MONETDB_INCLUDEDIR])
-AC_SUBST([MONETDB_LIBDIR])
-AC_SUBST([MONETDB_INCLUDES])
-AC_SUBST([MONETDB_LIBS])
 
 #############################################################################
 # Enable asserts? Possible values:

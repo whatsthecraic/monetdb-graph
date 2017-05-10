@@ -1,13 +1,5 @@
 # pkg-config wrapper for monetdb5.pc
-#serial 1
-
-# Avoid expanding the macros when the file has been included multiple times
-m4_ifndef([_MONETDB_PKGCONFIG_DEFINED], [
-m4_define([_MONETDB_PKGCONFIG_DEFINED])
-
-# FIXME: remove this hack
-m4_include(DIR_BUNDLE_M4[/pkg.m4])
-
+# serial 1
 
 # _MONETDB_PKGCONFIG_VARIABLE(pkg_config_variable, output_variable, [description])
 # -------------------------------------------
@@ -49,7 +41,9 @@ AC_DEFUN([MONETDB_PKGCONFIG_VARIABLE],[
 # Stores in <output_variable> the value from the option --<pkg_config_variable>.
 # The variable <output_variable> is not AC_SUBSTed.
 # It does not print any message to the user regarding the check being done.
-AC_DEFUN([_MONETDB_PKGCONFIG_OPTION], [dnl
+# WARNING: We cannot use AC_DEFUN because of AC_REQUIRE([PKG_PROG_PKG_CONFIG]),
+# PKG_PROG_PKG_CONFIG has not been defined yet (it belongs to pkg.m4)
+m4_define([_MONETDB_PKGCONFIG_OPTION], [dnl
   AC_REQUIRE([PKG_PROG_PKG_CONFIG])
   AS_VAR_PUSHDEF([TARGET], [$2])
   _PKG_CONFIG(TARGET, [$1], [[monetdb5]])
@@ -67,5 +61,3 @@ AC_DEFUN([MONETDB_PKGCONFIG_OPTION], [dnl
   AC_SUBST([$2])
 ])dnl MONETDB_PKGCONFIG_OPTION
 
-
-]) #ifndef _MONETDB_PKGCONFIG_DEFINED

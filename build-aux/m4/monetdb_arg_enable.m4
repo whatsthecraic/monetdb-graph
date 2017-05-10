@@ -1,5 +1,6 @@
-# Utility macros for MonetDB-Graph
-#serial 1
+# Commodity wrapper for AC_ARG_ENABLE to enable/disable options.
+# There should be no external macro dependencies.
+# serial 2
 
 # _MONETDB_SHELL_TEST_NE(value)
 # -------------------------------------------
@@ -7,7 +8,6 @@
 # Wraps <value> inside the shell construct `test x"<_MONETDB_OPTION_CURRENT>" != x"<value>"'
 # It assumes the macro _MONETDB_OPTION_CURRENT already exists
 AC_DEFUN([_MONETDB_SHELL_TEST_NE], [[test x"]_MONETDB_OPTION_CURRENT[" != x"$1"]])
-
 
 # _MONETDB_VALIDATE_OPTIONS(option_name, variable, list_options)
 # -------------------------------------------
@@ -60,10 +60,3 @@ AC_DEFUN([MONETDB_ARG_ENABLE], [dnl
   MONETDB_VALIDATE_OPTIONS([--enable-$1], ${enable_variable}, [$3])
   m4_popdef([enable_variable])
 ])
-
-
-# MONETDB_SET_CC_FLAG(var_cflags, flag)
-# -------------------------------------------
-#
-# Test whether <flag> is accepted by the current compiler. If so, it appends it to the shell variable <var_cflags>
-AC_DEFUN([MONETDB_SET_CC_FLAG], [ AX_CHECK_COMPILE_FLAG([$2], [AS_VAR_APPEND([$1], " $2")]) ])

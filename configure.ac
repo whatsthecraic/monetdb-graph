@@ -53,84 +53,9 @@ AS_VAR_APPEND([[EXTRA_CFLAGS]], [[" -fPIC"]])
 AS_VAR_APPEND([[EXTRA_CXXFLAGS]], [[" -fPIC"]])
 
 #############################################################################
-# MonetDB dependencies. Set the variables MONETDB_PREFIX
-# MONETDB_INCLUDEDIR, MONETDB_LIBDIR and MONETDB_INCLUDES
-# First check whether the user was so polite to provide the actual path
-AC_ARG_VAR([MONETDB], [The base path where MonetDB has been installed])
-ac_pkg_config_name="monetdb5"
-if (test -n "${MONETDB}"); then
-    # is this the binary executable for monetdb?
-    if test -f "${MONETDB}"; then
-        if ( test -x "${MONETDB}" && ${MONETDB} --version | head -n1 | egrep -i 'MonetDB[[:space:]]*[[:digit:]]+[[:space:]]*server' >/dev/null 2>&1); then
-            ac_monetdb_bindir=`AS_DIRNAME([["${MONETDB}"]])`
-            ac_monetdb_prefix=`AS_DIRNAME([["${ac_monetdb_bindir}"]])`
-            ac_monetdb_pkgconfig_dir="${ac_monetdb_prefix}:${ac_monetdb_prefix}/lib:${ac_monetdb_prefix}/lib/pkgconfig"
-        else
-             AC_MSG_ERROR([[invalid path specified for the variable \${MONETDB}: `${MONETDB}'. The path is a regular file and it is not pointing to MonetDB server]])
-        fi
-    elif ( test "x"$(basename "${MONETDB}") = "x${ac_pkg_config_name}.pc" ); then
-        ac_monetdb_pkgconfig_dir=`AS_DIRNAME([["${MONETDB}"]])`
-    elif test -d "${MONETDB}"; then # this is a directory
-        # is this the bindir ?
-        ac_monetdb_basename=$(basename "${MONETDB}")
-        if ( test -f "${MONETDB}/mserver5" && test -x "${MONETDB}/mserver5" ); then
-            ac_monetdb_bindir="${MONETDB}"
-            ac_monetdb_prefix=`AS_DIRNAME([["${ac_monetdb_bindir}"]])`
-            ac_monetdb_pkgconfig_dir="${ac_monetdb_prefix}:${ac_monetdb_prefix}/lib:${ac_monetdb_prefix}/lib/pkgconfig"
-        # is this the prefix directory ?
-        elif ( test -f "${MONETDB}/lib/pkgconfig/${ac_pkg_config_name}.pc" ); then
-            ac_monetdb_pkgconfig_dir="${MONETDB}/lib/pkgconfig";
-        # is this the libdir directory ?
-        elif ( test -f "${MONETDB}/pkgconfig/${ac_pkg_config_name}.pc" ); then
-            ac_monetdb_pkgconfig_dir="${MONETDB}/pkgconfig";
-        # is this the pkgconfig directory ?
-        elif ( test -f "${MONETDB}/${ac_pkg_config_name}.pc" ); then
-            ac_monetdb_pkgconfig_dir="${MONETDB}";
-        else
-            AC_MSG_ERROR([[invalid path specified for the variable \${MONETDB}. Unable to find `monetdb5.pc': `${MONETDB}']])
-        fi
-    else
-        AC_MSG_ERROR([[invalid path specified for the variable \${MONETDB}. The path does not exist: `${MONETDB}']])
-    fi
-fi
-# Okay, the user provided nothing... Scan the system to find the library
-if (test -z "$ac_monetdb_pkgconfig_dir"); then
-    if pkg-config --exists monetdb5; then
-        ac_monetdb_pkgconfig_found="yes"
-    else    
-        AC_PATH_PROG([MONETDB_MSERVER5], [mserver5])
-        if (test -z "${ac_cv_path_MONETDB_MSERVER5}"); then
-            AC_MSG_ERROR([unable to detect where monetdb has been installed. Use ./configure MONETDB=\${monetdb_prefix_path} to set the actual path])
-        fi
-        ac_monetdb_bindir=`AS_DIRNAME([["${ac_cv_path_MONETDB_MSERVER5}"]])`
-        ac_monetdb_prefix=`AS_DIRNAME([["${ac_monetdb_bindir}"]])`
-        ac_monetdb_pkgconfig_dir="${ac_monetdb_prefix}:${ac_monetdb_prefix}/lib:${ac_monetdb_prefix}/lib/pkgconfig"
-    fi
-fi
-# Try again to search for the installed package, this time by augmenting the special variable PKG_CONFIG_PATH
-ac_monetdb_pkgconfig_old=""
-if (test -z "${ac_monetdb_pkgconfig_found}"); then
-    if (test -n "${PKG_CONFIG_PATH}"); then
-        ac_monetdb_pkgconfig_old="${PKG_CONFIG_PATH}"
-        export PKG_CONFIG_PATH="${ac_monetdb_pkgconfig_dir}:${PKG_CONFIG_PATH}"
-    else
-        export PKG_CONFIG_PATH="${ac_monetdb_pkgconfig_dir}"
-    fi
-    if ! pkg-config --exists monetdb5; then
-        AC_MSG_ERROR([[unable to detect where MonetDB has been installed. PKG_CONFIG_PATH set to: `${ac_monetdb_pkgconfig_dir}'. Use ./configure MONETDB=\${monetdb_prefix_path} to set the actual path]])
-    fi
-fi
-# Retrieve the configuration of MonetDB from pkg-config
-PKG_PROG_PKG_CONFIG
-MONETDB_PKGCONFIG_VARIABLE([prefix], [MONETDB_PREFIX])
-MONETDB_PKGCONFIG_VARIABLE([includedir], [MONETDB_INCLUDEDIR], [[for MonetDB headers]])
-MONETDB_PKGCONFIG_VARIABLE([libdir], [MONETDB_LIBDIR], [[for MonetDB libraries]])
-MONETDB_PKGCONFIG_OPTION([cflags-only-I], [MONETDB_INCLUDES])
-MONETDB_PKGCONFIG_OPTION([libs], [MONETDB_LIBS])
-
-# Reset PKG_CONFIG_PATH
-export PKG_CONFIG_PATH="${ac_monetdb_pkgconfig_old}"
-unset ac_monetdb_pkgconfig_old
+# MonetDB dependency. It provides the output variables MONETDB_PREFIX
+# MONETDB_INCLUDEDIR, MONETDB_LIBDIR, MONETDB_INCLUDES and MONETDB_LIBS
+MONETDB_PROG_MONETDB
 
 #############################################################################
 # Enable asserts? Possible values:
@@ -139,7 +64,7 @@ unset ac_monetdb_pkgconfig_old
 # auto => check whether MonetDB defines NDEBUG and set EXTRA_CPPFLAGS accordingly
 MONETDB_ARG_ENABLE([assert], 
     [Whether to enable assertions. The option 'auto' implies the actual value is inherited from MonetDB config (recommended)], 
-    [yes no auto], [auto]) 
+    [yes no auto], [auto])
     
 if (test x"${enable_assert}" = x"auto"); then
     ac_cppflags_old="${CPPFLAGS}"
